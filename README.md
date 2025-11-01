@@ -1,73 +1,52 @@
-# Parking Tarif Calculator
+# Aplikasi Tarif Parkir
 
-A modern web application for calculating parking fees with digital receipt generation and QR code support.
+Aplikasi web untuk menghitung tarif parkir secara cepat dan akurat, dilengkapi tampilan resi yang dapat dicetak dan riwayat transaksi.
 
-## 🚀 Features
+## Cerita di Balik Proyek
 
-- **Smart Tariff Calculation**: Multiple pricing models (flat rate, hourly, per 30 minutes, per minute) including valet services
-- **Digital Receipts**: Generate shareable receipt links with Base64 URL encoding and QR codes
-- **Transaction History**: Local storage of up to 20 recent transactions
-- **Modern UI**: Responsive design with gradient themes and card-based layout
-- **Multi-Platform**: Web version and Cordova-ready assets for Android deployment
+Saya membuat aplikasi ini untuk membantu teman kerja saya yang mengalami kesulitan dalam menghitung tarif parkir. Dengan banyaknya aturan per jam dan variasi tarif, perhitungan manual sering memakan waktu dan rawan salah. Aplikasi ini hadir untuk menyederhanakan proses, meningkatkan ketelitian, dan menyajikan hasil yang mudah dipahami.
 
-## 🛠️ Quick Start
+## Penjelasan Singkat Proyek
 
-### Local Development
+- Menghitung tarif parkir berbasis durasi (jam pertama dan jam berikutnya)
+- Menampilkan resi yang bisa dicetak untuk keperluan dokumentasi
+- Menyimpan riwayat transaksi di perangkat (localStorage)
+- Tampilan responsif yang mudah digunakan di perangkat desktop maupun mobile
+- Tersedia aset untuk penggunaan di Android melalui Cordova
+
+## Cara Menjalankan
+
+Gunakan salah satu opsi berikut untuk menjalankan secara lokal:
+
 ```bash
-# Ensure Node.js is installed
+# Opsi 1: Python (simple HTTP server)
+python -m http.server 8000
+# Buka: http://localhost:8000/
+
+# Opsi 2: Node.js (http-server)
 npx http-server -p 8080
-
-# Open http://127.0.0.1:8080/ in your browser
+# Buka: http://127.0.0.1:8080/
 ```
 
-### GitHub Pages Deployment
-1. Push this repository to GitHub
-2. Go to repository Settings → Pages
-3. Select "Deploy from a branch" → `main` branch → `/ (root)`
-4. Your site will be available at `https://username.github.io/repository-name/`
-
-## 📁 Project Structure
+## Struktur Proyek
 
 ```
-├── index.html          # Main calculator page
-├── history.html        # Transaction history
-├── receipt.html        # Digital receipt viewer
-├── script.js          # Core application logic
-├── styles.css         # Global styles
-├── .nojekyll          # GitHub Pages configuration
-└── apk-cordova/       # Cordova assets for Android
-    └── www/           # Web assets for mobile app
+├── index.html       # Halaman utama
+├── history.html     # Riwayat transaksi
+├── receipt.html     # Tampilan resi
+├── script.js        # Logika aplikasi (web)
+├── styles.css       # Gaya global
+└── apk-cordova/     # Aset untuk aplikasi Android (Cordova)
+    └── www/
 ```
 
-## 🎯 Usage
+## Cara Menggunakan
 
-1. **Calculate Parking Fee**: Select vehicle type, enter duration, choose pricing model
-2. **Generate Receipt**: Create digital receipt with QR code for easy sharing
-3. **View History**: Access recent transactions stored locally
-4. **Share Receipt**: Use generated links or QR codes to share receipts
+- Pilih jenis kendaraan dan isi jam masuk/keluar
+- Klik `Hitung Tarif` untuk melihat rincian perhitungan
+- Klik `Buka Resi` untuk menampilkan resi dan mencetak
+- Buka `Riwayat Transaksi` untuk melihat transaksi sebelumnya
 
-## 🔧 Technical Details
+## Lisensi
 
-- **Storage**: Uses `localStorage` with key `parkingHistory` for data persistence
-- **QR Generation**: Client-side QR code generation using qrcode.js library
-- **URL Encoding**: Base64 URL-safe encoding for receipt data
-- **Responsive Design**: Mobile-first approach with modern CSS Grid and Flexbox
-
-## 📱 Mobile App (Cordova)
-
-The `apk-cordova/www/` directory contains assets for building an Android application using Apache Cordova. Ensure consistency between web and mobile versions during development.
-
-## 🤝 About This Project
-
-This application was specifically developed to help friends and colleagues in our local area with quick and accurate parking fee calculations. The project aims to:
-
-- **Simplify parking calculations** for daily commuters and visitors
-- **Provide digital receipts** that can be easily shared and verified
-- **Support local community** by offering a free, accessible tool
-- **Encourage collaboration** - feel free to fork, modify, and adapt for your area's specific parking rates and requirements
-
-Whether you're helping friends calculate parking costs or adapting this tool for your own community, contributions and local customizations are welcome!
-
-## 📄 License
-
-MIT License - Feel free to use and modify for your community needs.
+MIT License — bebas digunakan dan dimodifikasi sesuai kebutuhan.
