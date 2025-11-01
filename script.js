@@ -28,26 +28,7 @@ function buildBreakdown({ firstRate, nextRate, entry, exit, method, vehicle }) {
   const durDays = Math.floor(durHours / 24);
   const durHoursRem = durHours % 24;
 
-  // Dukungan tarif flat untuk Motor
-  if (method === 'flat') {
-    const totalCharge = firstRate;
-    const hourlyRows = [{ label: 'Tarif flat', unit: '-', subtotal: totalCharge }];
-    return {
-      totalMinutes,
-      durHours,
-      durMins,
-      firstHourCharge: totalCharge,
-      additionalMinutes: 0,
-      units: 0,
-      unitPrice: 0,
-      additionalCharge: 0,
-      totalCharge,
-      hourlyRows,
-      explanation: 'Tarif flat tanpa perhitungan per jam.',
-      methodLabel: 'Tarif flat',
-      formula: '-',
-    };
-  }
+
 
   const firstHourCharge = firstRate;
   const additionalMinutes = Math.max(0, totalMinutes - 60);
@@ -140,40 +121,7 @@ function buildBreakdown({ firstRate, nextRate, entry, exit, method, vehicle }) {
   };
 }
 
-// Dinamis: pastikan library QR available, fallback jika gagal
-function ensureQrLib() {
-  return new Promise((resolve, reject) => {
-    if (window.QRCode) return resolve(true);
-    const status = document.getElementById('qrStatus');
 
-    const tryLoad = (src, label) => new Promise((res, rej) => {
-      const s = document.createElement('script');
-      s.src = src;
-      s.onload = () => res(true);
-      s.onerror = () => rej(new Error(label));
-      document.head.appendChild(s);
-    });
-
-    const sources = [
-      { src: 'qrcode.min.js', label: 'lokal' },
-      ...(navigator.onLine ? [
-        { src: 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js', label: 'jsDelivr' },
-        { src: 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js', label: 'CDNJS' },
-      ] : [])
-    ];
-
-    (async () => {
-      for (const { src, label } of sources) {
-        if (status) status.textContent = `Memuat library QR (${label})…`;
-        try {
-          await tryLoad(src, label);
-          if (window.QRCode) return resolve(true);
-        } catch (_) { /* lanjut ke sumber berikutnya */ }
-      }
-      reject(new Error('QR library tidak tersedia'));
-    })();
-  });
-}
 
 // Perbarui tampilan breakdown agar menyertakan metode dan formula
 function renderBreakdown(container, data, ctx) {
@@ -281,31 +229,9 @@ function buildReceipt({ breakdown, entry, exit }) {
   `;
 }
 
-// Helper untuk base64 JSON aman di URL
-function toBase64Url(jsonStr){
-  const b64 = btoa(unescape(encodeURIComponent(jsonStr)));
-  return b64.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-}
 
-// Bangun payload QR sebagai LINK yang bisa dibuka Google Kamera
-function buildQrLink(breakdown, entry, exit){
-  const payload = {
-    id: `PKR-${new Date().getTime()}`,
-    total: breakdown.totalCharge,
-    masuk: formatDateTime(entry),
-    keluar: formatDateTime(exit),
-    durasi_menit: breakdown.totalMinutes,
-    metode: breakdown.methodLabel,
-  };
-  const json = JSON.stringify(payload);
-  const data = toBase64Url(json);
-  // Base URL aman untuk subpath: gunakan direktori saat ini
-  const baseDir = new URL('./', window.location.href);
-  const urlObj = new URL('receipt.html', baseDir);
-  urlObj.searchParams.set('data', data);
-  const url = urlObj.href;
-  return url;
-}
+
+
 
 // Fungsi untuk menyimpan riwayat transaksi ke localStorage
 function saveTransactionHistory(breakdown, entry, exit, vehicle) {
@@ -521,72 +447,9 @@ function getVehicleLabel(vehicleType) {
   return vehicleLabels[vehicleType] || vehicleType;
 }
 
-// Tambah: QR/barcode untuk resi digital
-function renderQRCode(linkUrl) {
-  const el = document.getElementById('qr');
-  const status = document.getElementById('qrStatus');
-  const qrLinkEl = document.getElementById('qrLink');
-  const online = navigator.onLine;
 
-  if (qrLinkEl) {
-    qrLinkEl.href = linkUrl;
-    qrLinkEl.textContent = linkUrl;
-  }
 
-  // Reset QR container
-  if (el) el.innerHTML = '';
 
-  if (!online) {
-    // Offline: jangan tampilkan barcode, hanya tautan
-    if (status) status.textContent = 'Perangkat offline — gunakan tautan di atas.';
-    if (el) { el.classList.remove('show'); el.classList.add('hidden'); }
-    return;
-  }
-
-  // Online: buat barcode
-  if (status) status.innerHTML = 'Membuat QR… <span class="spinner"></span>';
-  if (el) el.classList.remove('hidden');
-
-  ensureQrLib()
-    .then(() => {
-      if (window.QRCode && el) {
-        new QRCode(el, {
-          text: linkUrl,
-          width: 180,
-          height: 180,
-          correctLevel: QRCode.CorrectLevel.M,
-        });
-        if (status) status.textContent = 'QR berhasil dibuat. Scan untuk membuka resi.';
-        el.classList.add('show');
-      }
-    })
-    .catch(() => {
-      // Gagal memuat library meski online: tampilkan tautan saja
-      if (status) status.textContent = 'Gagal memuat library QR. Gunakan tautan.';
-      if (el) { el.classList.remove('show'); el.classList.add('hidden'); }
-    });
-}
-
-function onDownloadQr() {
-  const el = document.getElementById('qr');
-  const img = el.querySelector('img');
-  const canvas = el.querySelector('canvas');
-  let dataURL = '';
-  if (img) {
-    dataURL = img.src;
-  } else if (canvas) {
-    dataURL = canvas.toDataURL('image/png');
-  } else {
-    alert('Barcode belum dibuat. Hitung tarif dulu.');
-    return;
-  }
-  const a = document.createElement('a');
-  a.href = dataURL;
-  a.download = 'resi-barcode.png';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
 
 function openPrintPreview() {
   const receiptHtml = document.getElementById('receipt').innerHTML;
@@ -663,9 +526,7 @@ function onSubmit(evt) {
     // (mis. setelah tombol Riwayat ditekan jika berada di halaman yang sama)
   }
 
-  // Buat tautan resi dan simpan untuk tombol Buka Resi
-  const receiptLink = buildQrLink(breakdown, entry, exit);
-  window.__receiptLink = receiptLink;
+
 
   // Tampilkan tombol aksi di bawah detail perhitungan
   const actionsSection = document.getElementById('actionsSection');
@@ -678,34 +539,13 @@ function onReset() {
   document.getElementById('receiptSection').classList.add('hidden');
   const actionsSection = document.getElementById('actionsSection');
   if (actionsSection) actionsSection.classList.add('hidden');
-  const qrEl = document.getElementById('qr');
-  const status = document.getElementById('qrStatus');
-  const qrLinkEl = document.getElementById('qrLink');
-  if (qrEl) qrEl.innerHTML = '';
-  if (status) status.textContent = '';
-  if (qrLinkEl) { qrLinkEl.removeAttribute('href'); qrLinkEl.textContent=''; }
 }
 
 function onPrint() {
   window.print();
 }
 
-function onCopyLink(){
-  const linkEl = document.getElementById('qrLink');
-  const link = (linkEl && (linkEl.href || linkEl.textContent)) || '';
-  if (!link){ alert('Tautan belum tersedia. Hitung tarif dulu.'); return; }
-  if (navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(link).then(()=>{
-      const btn = document.getElementById('copyLinkBtn');
-      if (btn){ const prev = btn.textContent; btn.textContent = 'Tersalin!'; setTimeout(()=> btn.textContent = prev, 1200); }
-    }).catch(()=> alert('Gagal menyalin tautan'));
-  } else {
-    const ta = document.createElement('textarea');
-    ta.value = link; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-    const btn = document.getElementById('copyLinkBtn');
-    if (btn){ const prev = btn.textContent; btn.textContent = 'Tersalin!'; setTimeout(()=> btn.textContent = prev, 1200); }
-  }
-}
+
 
 function applyTheme(theme){
   const isDark = theme === 'dark';
@@ -744,13 +584,6 @@ window.addEventListener('DOMContentLoaded', () => {
       rc.innerHTML = receiptHTML;
       rs.classList.remove('hidden');
     }
-    // Render QR dan pasang handler tombol terkait
-    const link = window.__receiptLink;
-    if (link) { renderQRCode(link); }
-    const dl = document.getElementById('downloadQrBtn');
-    if (dl) dl.addEventListener('click', onDownloadQr);
-    const cp = document.getElementById('copyLinkBtn');
-    if (cp) cp.addEventListener('click', onCopyLink);
   });
 
   // Navigasi ke halaman riwayat
