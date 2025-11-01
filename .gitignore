@@ -1,0 +1,18 @@
+# Umum
+.DS_Store
+Thumbs.db
+*.log
+
+# Paket/apk lokal
+Hitung Cepat.apk
+
+# Cordova: biar repo tetap ringan
+apk-cordova/gradle-*/
+apk-cordova/jdk*/
+apk-cordova/platforms/
+apk-cordova/plugins/
+apk-cordova/node_modules/
+
+# Build artifacts
+dist/
+build/
