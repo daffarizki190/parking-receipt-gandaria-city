@@ -1,4 +1,4 @@
-# Parking Tariff Calculator
+# Parking Tarif Calculator
 
 A modern web application for calculating parking fees with digital receipt generation and QR code support.
 
