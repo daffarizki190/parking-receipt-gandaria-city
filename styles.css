@@ -1,6 +1,6 @@
 /* Reset & base */
-* { 
-  box-sizing: border-box; 
+* {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
@@ -21,12 +21,13 @@
   --shadow-heavy: 0 12px 40px rgba(0, 0, 0, 0.2);
 }
 
-html, body { 
-  height: 100%; 
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+html,
+body {
+  height: 100%;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
-body { 
+body {
   background: var(--primary-gradient);
   background-attachment: fixed;
   color: var(--text-primary);
@@ -41,24 +42,36 @@ body::before {
   pointer-events: none;
   z-index: -1;
   background:
-    radial-gradient(circle at 20% 80%, rgba(102, 126, 234, 0.4), transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(118, 75, 162, 0.4), transparent 50%),
-    radial-gradient(circle at 40% 40%, rgba(102, 126, 234, 0.3), transparent 50%);
+    radial-gradient(
+      circle at 20% 80%,
+      rgba(102, 126, 234, 0.4),
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 20%,
+      rgba(118, 75, 162, 0.4),
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 40% 40%,
+      rgba(102, 126, 234, 0.3),
+      transparent 50%
+    );
 }
 
-.container { 
-  max-width: 600px; 
-  margin: 0 auto; 
-  padding: 20px; 
-  position: relative; 
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+  position: relative;
 }
 
 /* Header */
-.page-header { 
-  display: flex; 
-  align-items: center; 
-  justify-content: center; 
-  margin-bottom: 30px; 
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 30px;
 }
 
 /* Header khusus halaman resi: judul kiri, aksi kanan */
@@ -66,22 +79,22 @@ body::before {
   justify-content: space-between;
 }
 
-.page-header h1 { 
-  font-size: 2.5rem; 
-  font-weight: 700; 
-  margin: 0; 
+.page-header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0;
   color: white;
   text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   text-align: center;
 }
 
 /* Card */
-.card { 
+.card {
   background: var(--card-bg);
   backdrop-filter: blur(20px);
   border: 1px solid var(--border-color);
-  border-radius: 24px; 
-  padding: 30px; 
+  border-radius: 24px;
+  padding: 30px;
   margin-bottom: 25px;
   box-shadow: var(--shadow-medium);
   transition: all 0.3s ease;
@@ -92,27 +105,28 @@ body::before {
   box-shadow: var(--shadow-heavy);
 }
 
-.card h2 { 
-  margin-top: 0; 
-  font-size: 1.5rem; 
+.card h2 {
+  margin-top: 0;
+  font-size: 1.5rem;
   color: var(--text-primary);
   margin-bottom: 25px;
   font-weight: 600;
 }
 
 /* Form */
-form { 
-  display: grid; 
-  gap: 20px; 
+form {
+  display: grid;
+  gap: 20px;
 }
 
 .form-group {
   margin-bottom: 20px;
 }
 
-label, .label { 
+label,
+.label {
   display: block;
-  font-size: 14px; 
+  font-size: 14px;
   color: var(--text-secondary);
   margin-bottom: 8px;
   font-weight: 600;
@@ -120,40 +134,43 @@ label, .label {
   letter-spacing: 0.5px;
 }
 
-input, select { 
-  width: 100%; 
-  padding: 16px 20px; 
-  border-radius: 16px; 
-  border: 2px solid #e2e8f0; 
-  background: white; 
-  color: var(--text-primary); 
-  outline: none; 
+input,
+select {
+  width: 100%;
+  padding: 16px 20px;
+  border-radius: 16px;
+  border: 2px solid #e2e8f0;
+  background: white;
+  color: var(--text-primary);
+  outline: none;
   transition: all 0.3s ease;
   font-size: 16px;
 }
 
-input:focus, select:focus { 
-  border-color: #667eea; 
+input:focus,
+select:focus {
+  border-color: #667eea;
   box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
   transform: translateY(-2px);
 }
 
 /* Actions */
-.actions { 
-  display: flex; 
-  gap: 15px; 
-  align-items: center; 
-  justify-content: center; 
-  margin-top: 25px; 
+.actions {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 25px;
 }
 
-.btn, button { 
-  appearance: none; 
-  border: none; 
-  padding: 16px 32px; 
-  border-radius: 16px; 
-  font-weight: 600; 
-  cursor: pointer; 
+.btn,
+button {
+  appearance: none;
+  border: none;
+  padding: 16px 32px;
+  border-radius: 16px;
+  font-weight: 600;
+  cursor: pointer;
   transition: all 0.3s ease;
   font-size: 16px;
   text-transform: uppercase;
@@ -163,50 +180,63 @@ input:focus, select:focus {
   min-width: 140px;
 }
 
-.btn::before, button::before {
-  content: '';
+.btn::before,
+button::before {
+  content: "";
   position: absolute;
   top: 0;
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
   transition: left 0.5s;
 }
 
-.btn:hover::before, button:hover::before {
+.btn:hover::before,
+button:hover::before {
   left: 100%;
 }
 
-.btn:hover, button:hover { 
+.btn:hover,
+button:hover {
   transform: translateY(-3px);
 }
 
-.btn:active, button:active { 
-  transform: translateY(-1px); 
+.btn:active,
+button:active {
+  transform: translateY(-1px);
 }
 
-.btn.primary, button.primary { 
+.btn.primary,
+button.primary {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white; 
+  color: white;
   box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
 }
 
-.btn.primary:hover, button.primary:hover { 
+.btn.primary:hover,
+button.primary:hover {
   box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
 }
 
-.btn.secondary, button.secondary { 
+.btn.secondary,
+button.secondary {
   background: linear-gradient(135deg, #00d4ff 0%, #00a8cc 100%);
-  color: white; 
+  color: white;
   box-shadow: 0 4px 15px rgba(0, 212, 255, 0.4);
 }
 
-.btn.secondary:hover, button.secondary:hover { 
+.btn.secondary:hover,
+button.secondary:hover {
   box-shadow: 0 8px 25px rgba(0, 212, 255, 0.6);
 }
 
-.btn.ghost { 
+.btn.ghost {
   background: rgba(255, 255, 255, 0.1);
   color: white;
   border: 2px solid rgba(255, 255, 255, 0.3);
@@ -218,9 +248,9 @@ input:focus, select:focus {
   border-color: rgba(255, 255, 255, 0.5);
 }
 
-.btn.accent { 
+.btn.accent {
   background: var(--accent-gradient);
-  color: white; 
+  color: white;
   box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
 }
 
@@ -245,29 +275,31 @@ input:focus, select:focus {
   box-shadow: 0 6px 20px rgba(0, 212, 255, 0.6);
 }
 
-.btn.accent:hover { 
+.btn.accent:hover {
   box-shadow: 0 8px 25px rgba(79, 172, 254, 0.6);
 }
 
 /* Grid */
-.kv { 
-  display: grid; 
-  grid-template-columns: 160px 1fr; 
-  gap: 10px 16px; 
-  align-items: center; 
+.kv {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 10px 16px;
+  align-items: center;
 }
 
-.kv .mono { 
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; 
+.kv .mono {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
 }
 
-.badge { 
-  display: inline-block; 
+.badge {
+  display: inline-block;
   background: var(--accent-gradient);
-  color: white; 
+  color: white;
   border: none;
-  padding: 6px 12px; 
-  border-radius: 20px; 
+  padding: 6px 12px;
+  border-radius: 20px;
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
@@ -275,25 +307,26 @@ input:focus, select:focus {
 }
 
 /* Tables */
-.table { 
-  width: 100%; 
-  border-collapse: collapse; 
-  font-size: 14px; 
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
   background: white;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: var(--shadow-light);
 }
 
-.table th, .table td { 
-  border-bottom: 1px solid #f1f5f9; 
-  padding: 12px 16px; 
-  text-align: left; 
+.table th,
+.table td {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 12px 16px;
+  text-align: left;
 }
 
 /* Pastikan teks isi tabel terlihat di dalam container yang berwarna */
-.table td { 
-  color: var(--text-primary); 
+.table td {
+  color: var(--text-primary);
 }
 
 .table th {
@@ -305,14 +338,14 @@ input:focus, select:focus {
   font-size: 12px;
 }
 
-.table tfoot td { 
-  font-weight: 700; 
+.table tfoot td {
+  font-weight: 700;
   background: #f8fafc;
   color: var(--text-primary);
 }
 
 /* Receipt */
-.receipt { 
+.receipt {
   background: var(--accent-gradient);
   color: white;
   padding: 25px;
@@ -320,15 +353,15 @@ input:focus, select:focus {
   box-shadow: 0 8px 25px rgba(79, 172, 254, 0.3);
 }
 
-.receipt .receipt-header { 
-  display: flex; 
-  justify-content: space-between; 
-  align-items: flex-start; 
-  margin-bottom: 20px; 
+.receipt .receipt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
 }
 
-.receipt .mono { 
-  color: rgba(255, 255, 255, 0.8); 
+.receipt .mono {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 /* Pastikan angka subtotal di tabel tetap gelap saat berada di dalam resi */
@@ -378,13 +411,13 @@ input:focus, select:focus {
 }
 
 /* Hidden */
-.hidden { 
-  display: none; 
+.hidden {
+  display: none;
 }
 
 /* Sections spacing */
-section + section { 
-  margin-top: 20px; 
+section + section {
+  margin-top: 20px;
 }
 
 /* Footer copyright */
@@ -400,29 +433,31 @@ section + section {
   .container {
     padding: 15px;
   }
-  
+
   .page-header h1 {
     font-size: 2rem;
   }
-  
+
   .card {
     padding: 20px;
     margin-bottom: 20px;
   }
-  
+
   .actions {
     flex-direction: column;
   }
-  
-  .btn, button {
+
+  .btn,
+  button {
     width: 100%;
     margin-bottom: 10px;
   }
-  
-  input, select {
+
+  input,
+  select {
     padding: 12px 16px;
   }
-  
+
   .kv {
     grid-template-columns: 1fr;
     gap: 8px;
@@ -433,12 +468,13 @@ section + section {
   .page-header h1 {
     font-size: 1.8rem;
   }
-  
+
   .card {
     padding: 15px;
   }
-  
-  .btn, button {
+
+  .btn,
+  button {
     padding: 14px 20px;
     font-size: 14px;
   }

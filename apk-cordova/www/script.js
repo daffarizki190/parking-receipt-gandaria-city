@@ -1,12 +1,18 @@
 function formatIDR(value) {
-  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(value);
 }
 
-function pad(n) { return String(n).padStart(2, '0'); }
+function pad(n) {
+  return String(n).padStart(2, "0");
+}
 
 function formatDateTime(dt) {
   const d = new Date(dt);
-  const tgl = `${pad(d.getDate())}-${pad(d.getMonth()+1)}-${d.getFullYear()}`;
+  const tgl = `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`;
   const jam = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
   return `${tgl} ${jam} WIB`;
 }
@@ -20,7 +26,7 @@ function calcDurationMinutes(start, end) {
 function buildBreakdown({ firstRate, nextRate, entry, exit, method, vehicle }) {
   const totalMinutes = calcDurationMinutes(entry, exit);
   if (isNaN(totalMinutes) || totalMinutes <= 0) {
-    return { error: 'Jam keluar harus lebih besar dari jam masuk.' };
+    return { error: "Jam keluar harus lebih besar dari jam masuk." };
   }
 
   const durHours = Math.floor(totalMinutes / 60);
@@ -34,40 +40,48 @@ function buildBreakdown({ firstRate, nextRate, entry, exit, method, vehicle }) {
   let units = 0;
   let unitPrice = 0;
   let additionalCharge = 0;
-  let methodLabel = '';
-  let formula = '';
-  let unitLabel = '';
+  let methodLabel = "";
+  let formula = "";
+  let unitLabel = "";
 
-  if (method === 'hourly') {
+  if (method === "hourly") {
     units = Math.max(0, durHours - 1);
     unitPrice = nextRate;
     additionalCharge = units * unitPrice;
-    methodLabel = 'Per jam';
+    methodLabel = "Per jam";
     formula = `${formatIDR(firstRate)} + (${units} × ${formatIDR(nextRate)})`;
-    unitLabel = 'jam';
-  } else if (method === 'half_hour') {
+    unitLabel = "jam";
+  } else if (method === "half_hour") {
     const halfHours = Math.max(0, Math.ceil(additionalMinutes / 30));
     units = halfHours;
     unitPrice = nextRate;
     additionalCharge = units * unitPrice;
-    methodLabel = 'Per 30 menit';
+    methodLabel = "Per 30 menit";
     formula = `${formatIDR(firstRate)} + (${units} × ${formatIDR(nextRate)})`;
-    unitLabel = '30 menit';
-  } else if (method === 'per_minute') {
+    unitLabel = "30 menit";
+  } else if (method === "per_minute") {
     units = additionalMinutes;
     unitPrice = nextRate;
     additionalCharge = units * unitPrice;
-    methodLabel = 'Per menit';
+    methodLabel = "Per menit";
     formula = `${formatIDR(firstRate)} + (${units} × ${formatIDR(nextRate)})`;
-    unitLabel = 'menit';
+    unitLabel = "menit";
   }
 
   const totalCharge = firstHourCharge + additionalCharge;
 
   const hourlyRows = [];
-  hourlyRows.push({ label: 'Jam pertama', unit: '1 jam', subtotal: firstHourCharge });
+  hourlyRows.push({
+    label: "Jam pertama",
+    unit: "1 jam",
+    subtotal: firstHourCharge,
+  });
   if (units > 0) {
-    hourlyRows.push({ label: `Tambahan (${units} ${unitLabel})`, unit: `${units} ${unitLabel}`, subtotal: additionalCharge });
+    hourlyRows.push({
+      label: `Tambahan (${units} ${unitLabel})`,
+      unit: `${units} ${unitLabel}`,
+      subtotal: additionalCharge,
+    });
   }
 
   return {
@@ -93,16 +107,19 @@ function renderBreakdown(container, data, ctx) {
   const durDays = Math.floor(data.durHours / 24);
   const durHoursRem = data.durHours % 24;
 
-  let durationText = '';
+  let durationText = "";
   if (durDays > 0) {
     durationText = `${durDays} hari ${durHoursRem} jam ${data.durMins} menit`;
   } else {
     durationText = `${data.durHours} jam ${data.durMins} menit`;
   }
 
-  const rows = data.hourlyRows.map(row => 
-    `<tr><td>${row.label}</td><td>${row.unit}</td><td>${formatIDR(row.subtotal)}</td></tr>`
-  ).join('');
+  const rows = data.hourlyRows
+    .map(
+      (row) =>
+        `<tr><td>${row.label}</td><td>${row.unit}</td><td>${formatIDR(row.subtotal)}</td></tr>`,
+    )
+    .join("");
 
   container.innerHTML = `
     <div class="breakdown-header">
@@ -137,16 +154,19 @@ function buildReceipt({ breakdown, entry, exit }) {
   const durDays = Math.floor(breakdown.durHours / 24);
   const durHoursRem = breakdown.durHours % 24;
 
-  let durationText = '';
+  let durationText = "";
   if (durDays > 0) {
     durationText = `${durDays} hari ${durHoursRem} jam ${breakdown.durMins} menit`;
   } else {
     durationText = `${breakdown.durHours} jam ${breakdown.durMins} menit`;
   }
 
-  const rows = breakdown.hourlyRows.map(row => 
-    `<tr><td>${row.label}</td><td>${formatIDR(row.subtotal)}</td></tr>`
-  ).join('');
+  const rows = breakdown.hourlyRows
+    .map(
+      (row) =>
+        `<tr><td>${row.label}</td><td>${formatIDR(row.subtotal)}</td></tr>`,
+    )
+    .join("");
 
   return `
     <div class="receipt-header">
@@ -203,42 +223,47 @@ function saveTransactionHistory(breakdown, entry, exit, vehicle) {
     duration: `${breakdown.durHours}j ${breakdown.durMins}m`,
     method: breakdown.methodLabel,
     total: breakdown.totalCharge,
-    breakdown: breakdown
+    breakdown: breakdown,
   };
 
   const history = getTransactionHistory();
   history.unshift(transaction);
-  
+
   // Batasi riwayat maksimal 50 transaksi
   if (history.length > 50) {
     history.splice(50);
   }
-  
-  localStorage.setItem('parkingHistory', JSON.stringify(history));
+
+  localStorage.setItem("parkingHistory", JSON.stringify(history));
 }
 
 function getTransactionHistory() {
-  const stored = localStorage.getItem('parkingHistory');
+  const stored = localStorage.getItem("parkingHistory");
   return stored ? JSON.parse(stored) : [];
 }
 
 function renderTransactionHistory(container) {
   const history = getTransactionHistory();
-  
+
   if (history.length === 0) {
-    container.innerHTML = '<p class="no-history">Belum ada riwayat transaksi</p>';
+    container.innerHTML =
+      '<p class="no-history">Belum ada riwayat transaksi</p>';
     return;
   }
 
-  const rows = history.map(transaction => `
+  const rows = history
+    .map(
+      (transaction) => `
     <tr onclick="showTransactionDetails('${transaction.id}')" style="cursor: pointer;">
-      <td>${new Date(transaction.timestamp).toLocaleDateString('id-ID')}</td>
+      <td>${new Date(transaction.timestamp).toLocaleDateString("id-ID")}</td>
       <td>${transaction.vehicle}</td>
       <td>${transaction.duration}</td>
       <td>${transaction.method}</td>
       <td>${formatIDR(transaction.total)}</td>
     </tr>
-  `).join('');
+  `,
+    )
+    .join("");
 
   container.innerHTML = `
     <div class="history-header">
@@ -267,24 +292,24 @@ function renderTransactionHistory(container) {
 
 function showTransactionDetails(transactionId) {
   const history = getTransactionHistory();
-  const transaction = history.find(t => t.id === transactionId);
-  
+  const transaction = history.find((t) => t.id === transactionId);
+
   if (!transaction) {
-    alert('Transaksi tidak ditemukan');
+    alert("Transaksi tidak ditemukan");
     return;
   }
 
   const entry = new Date(transaction.entry);
   const exit = new Date(transaction.exit);
-  const receipt = buildReceipt({ 
-    breakdown: transaction.breakdown, 
-    entry, 
-    exit 
+  const receipt = buildReceipt({
+    breakdown: transaction.breakdown,
+    entry,
+    exit,
   });
 
   // Buat modal untuk menampilkan detail
-  const modal = document.createElement('div');
-  modal.className = 'transaction-modal';
+  const modal = document.createElement("div");
+  modal.className = "transaction-modal";
   modal.innerHTML = `
     <div class="modal-content">
       <div class="modal-header">
@@ -305,8 +330,8 @@ function showTransactionDetails(transactionId) {
 }
 
 function openPrintPreview() {
-  const receiptHtml = document.getElementById('receipt').innerHTML;
-  const printWindow = window.open('', '_blank');
+  const receiptHtml = document.getElementById("receipt").innerHTML;
+  const printWindow = window.open("", "_blank");
   printWindow.document.write(`
     <html><head><title>Print Resi</title>
     <style>
@@ -327,126 +352,153 @@ function openPrintPreview() {
 
 function onSubmit(evt) {
   evt.preventDefault();
-  
-  const vehicleType = document.getElementById('vehicleType').value;
+
+  const vehicleType = document.getElementById("vehicleType").value;
   const { firstRate, nextRate, method, vehicle } = getVehicleRates(vehicleType);
 
-  const entryVal = document.getElementById('entryTime').value;
-  const exitVal = document.getElementById('exitTime').value;
+  const entryVal = document.getElementById("entryTime").value;
+  const exitVal = document.getElementById("exitTime").value;
 
   if (!(entryVal && exitVal)) return;
 
   const entry = new Date(entryVal);
   const exit = new Date(exitVal);
 
-  const breakdown = buildBreakdown({ firstRate, nextRate, entry, exit, method, vehicle });
-  const resultSection = document.getElementById('resultSection');
-  const receiptSection = document.getElementById('receiptSection');
-  const breakdownContainer = document.getElementById('breakdown');
-  const receiptContainer = document.getElementById('receipt');
+  const breakdown = buildBreakdown({
+    firstRate,
+    nextRate,
+    entry,
+    exit,
+    method,
+    vehicle,
+  });
+  const resultSection = document.getElementById("resultSection");
+  const receiptSection = document.getElementById("receiptSection");
+  const breakdownContainer = document.getElementById("breakdown");
+  const receiptContainer = document.getElementById("receipt");
 
   if (breakdown.error) {
-    resultSection.classList.add('hidden');
-    receiptSection.classList.add('hidden');
+    resultSection.classList.add("hidden");
+    receiptSection.classList.add("hidden");
     alert(breakdown.error);
     return;
   }
 
   renderBreakdown(breakdownContainer, breakdown, { entry, exit, method });
-  resultSection.classList.remove('hidden');
+  resultSection.classList.remove("hidden");
 
   window.__lastReceiptData = { breakdown, entry, exit };
-  receiptSection.classList.add('hidden');
-  receiptContainer.innerHTML = '';
+  receiptSection.classList.add("hidden");
+  receiptContainer.innerHTML = "";
 
   saveTransactionHistory(breakdown, entry, exit, vehicle);
 
-  const actionsSection = document.getElementById('actionsSection');
-  if (actionsSection) actionsSection.classList.remove('hidden');
+  const actionsSection = document.getElementById("actionsSection");
+  if (actionsSection) actionsSection.classList.remove("hidden");
 }
 
 function onReset() {
-  document.getElementById('parkingForm').reset();
-  document.getElementById('resultSection').classList.add('hidden');
-  document.getElementById('receiptSection').classList.add('hidden');
-  const actionsSection = document.getElementById('actionsSection');
-  if (actionsSection) actionsSection.classList.add('hidden');
+  document.getElementById("parkingForm").reset();
+  document.getElementById("resultSection").classList.add("hidden");
+  document.getElementById("receiptSection").classList.add("hidden");
+  const actionsSection = document.getElementById("actionsSection");
+  if (actionsSection) actionsSection.classList.add("hidden");
 }
 
 function onPrint() {
   window.print();
 }
 
-function applyTheme(theme){
-  const isDark = theme === 'dark';
-  document.documentElement.setAttribute('data-theme', theme);
-  localStorage.setItem('theme', theme);
+function applyTheme(theme) {
+  const isDark = theme === "dark";
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem("theme", theme);
 }
 
-function toggleTheme(){
-  const current = localStorage.getItem('theme') || 'light';
-  const newTheme = current === 'light' ? 'dark' : 'light';
+function toggleTheme() {
+  const current = localStorage.getItem("theme") || "light";
+  const newTheme = current === "light" ? "dark" : "light";
   applyTheme(newTheme);
 }
 
 function getVehicleLabel(vehicle) {
   const labels = {
-    'mobil': 'Mobil',
-    'motor': 'Motor', 
-    'box': 'Box/Truk',
-    'valet_weekday': 'Valet Weekday',
-    'valet_weekend': 'Valet Weekend'
+    mobil: "Mobil",
+    motor: "Motor",
+    box: "Box/Truk",
+    valet_weekday: "Valet Weekday",
+    valet_weekend: "Valet Weekend",
   };
   return labels[vehicle] || vehicle;
 }
 
 function getVehicleRates(vehicleType) {
   const rates = {
-    mobil: { firstRate: 5000, nextRate: 3000, method: 'hourly', vehicle: 'mobil' },
-    motor: { firstRate: 2000, nextRate: 1000, method: 'hourly', vehicle: 'motor' },
-    box: { firstRate: 10000, nextRate: 5000, method: 'hourly', vehicle: 'box' },
-    valet_weekday: { firstRate: 25000, nextRate: 5000, method: 'hourly', vehicle: 'valet_weekday' },
-    valet_weekend: { firstRate: 30000, nextRate: 5000, method: 'hourly', vehicle: 'valet_weekend' }
+    mobil: {
+      firstRate: 5000,
+      nextRate: 3000,
+      method: "hourly",
+      vehicle: "mobil",
+    },
+    motor: {
+      firstRate: 2000,
+      nextRate: 1000,
+      method: "hourly",
+      vehicle: "motor",
+    },
+    box: { firstRate: 10000, nextRate: 5000, method: "hourly", vehicle: "box" },
+    valet_weekday: {
+      firstRate: 25000,
+      nextRate: 5000,
+      method: "hourly",
+      vehicle: "valet_weekday",
+    },
+    valet_weekend: {
+      firstRate: 30000,
+      nextRate: 5000,
+      method: "hourly",
+      vehicle: "valet_weekend",
+    },
   };
   return rates[vehicleType] || rates.mobil;
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  const form = document.getElementById('parkingForm');
-  const resetBtn = document.getElementById('resetBtn');
-  const printBtn = document.getElementById('printBtn');
-  const themeToggle = document.getElementById('themeToggle');
+window.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("parkingForm");
+  const resetBtn = document.getElementById("resetBtn");
+  const printBtn = document.getElementById("printBtn");
+  const themeToggle = document.getElementById("themeToggle");
 
-  if (form) form.addEventListener('submit', onSubmit);
-  if (resetBtn) resetBtn.addEventListener('click', onReset);
-  if (printBtn) printBtn.addEventListener('click', onPrint);
-  if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
+  if (form) form.addEventListener("submit", onSubmit);
+  if (resetBtn) resetBtn.addEventListener("click", onReset);
+  if (printBtn) printBtn.addEventListener("click", onPrint);
+  if (themeToggle) themeToggle.addEventListener("click", toggleTheme);
 
-  const savedTheme = localStorage.getItem('theme') || 'light';
+  const savedTheme = localStorage.getItem("theme") || "light";
   applyTheme(savedTheme);
 
   const now = new Date();
-  const entryTime = document.getElementById('entryTime');
-  const exitTime = document.getElementById('exitTime');
-  
+  const entryTime = document.getElementById("entryTime");
+  const exitTime = document.getElementById("exitTime");
+
   if (entryTime && exitTime) {
     const entryDefault = new Date(now.getTime() - 2 * 60 * 60 * 1000);
     entryTime.value = entryDefault.toISOString().slice(0, 16);
     exitTime.value = now.toISOString().slice(0, 16);
   }
 
-  const showReceiptBtn = document.getElementById('showReceiptBtn');
+  const showReceiptBtn = document.getElementById("showReceiptBtn");
   if (showReceiptBtn) {
-    showReceiptBtn.addEventListener('click', () => {
+    showReceiptBtn.addEventListener("click", () => {
       if (window.__lastReceiptData) {
         const { breakdown, entry, exit } = window.__lastReceiptData;
-        const receiptContainer = document.getElementById('receipt');
-        const receiptSection = document.getElementById('receiptSection');
-        
+        const receiptContainer = document.getElementById("receipt");
+        const receiptSection = document.getElementById("receiptSection");
+
         receiptContainer.innerHTML = buildReceipt({ breakdown, entry, exit });
-        receiptSection.classList.remove('hidden');
+        receiptSection.classList.remove("hidden");
       } else {
-        alert('Belum ada data resi. Hitung tarif terlebih dahulu.');
+        alert("Belum ada data resi. Hitung tarif terlebih dahulu.");
       }
     });
   }
@@ -455,9 +507,9 @@ window.addEventListener('DOMContentLoaded', () => {
 window.showTransactionDetails = showTransactionDetails;
 
 function clearTransactionHistory() {
-  if (confirm('Yakin ingin menghapus semua riwayat transaksi?')) {
-    localStorage.removeItem('parkingHistory');
-    const container = document.getElementById('transactionHistory');
+  if (confirm("Yakin ingin menghapus semua riwayat transaksi?")) {
+    localStorage.removeItem("parkingHistory");
+    const container = document.getElementById("transactionHistory");
     if (container) renderTransactionHistory(container);
   }
 }

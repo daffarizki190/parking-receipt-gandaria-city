@@ -1,83 +1,111 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Resi Parkir</title>
-  <link rel="stylesheet" href="styles.css" />
-</head>
-<body>
-  <main class="container">
-    <div class="motif-band" aria-hidden="true"></div>
-    <div class="brand" style="font-weight:700; letter-spacing:.2px; opacity:.9; margin-top:.25rem; margin-bottom:.25rem;">Gandaria City</div>
-    <header class="page-header receipt-header">
-      <h1>Resi Parkir</h1>
-      <div class="actions">
-        <a href="index.html" class="btn secondary">Kembali</a>
-        <button id="printBtn" class="btn primary">Cetak</button>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Resi Parkir</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <div class="motif-band" aria-hidden="true"></div>
+      <div
+        class="brand"
+        style="
+          font-weight: 700;
+          letter-spacing: 0.2px;
+          opacity: 0.9;
+          margin-top: 0.25rem;
+          margin-bottom: 0.25rem;
+        "
+      >
+        Gandaria City
       </div>
-    </header>
+      <header class="page-header receipt-header">
+        <h1>Resi Parkir</h1>
+        <div class="actions">
+          <a href="index.html" class="btn secondary">Kembali</a>
+          <button id="printBtn" class="btn primary">Cetak</button>
+        </div>
+      </header>
 
-    <section id="receiptSection" class="card">
-      <div id="receipt" class="receipt"></div>
-    </section>
+      <section id="receiptSection" class="card">
+        <div id="receipt" class="receipt"></div>
+      </section>
 
-  <script>
-    // Tema gelap dihapus, cukup render resi
-    function pad(n){ return String(n).padStart(2,'0'); }
-    function formatDateTime(dt){
-      const d = new Date(dt);
-      const tgl = `${pad(d.getDate())}-${pad(d.getMonth()+1)}-${d.getFullYear()}`;
-      const jam = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-      return `${tgl} ${jam} WIB`;
-    }
-    function formatIDR(value){
-      return new Intl.NumberFormat('id-ID', { style:'currency', currency:'IDR', maximumFractionDigits:0 }).format(value);
-    }
-    function padB64(s){ const padLen = (4 - (s.length % 4)) % 4; return s + '='.repeat(padLen); }
-    function fromBase64UrlToJson(b64url){
-      const raw = (b64url || '').trim();
-      const attempts = [
-        () => atob(padB64(raw.replace(/-/g,'+').replace(/_/g,'/'))),
-        () => atob(padB64(raw)),
-      ];
-      for (const decode of attempts){
-        try{
-          const str = decode();
-          const jsonStr = decodeURIComponent(escape(str));
-          return JSON.parse(jsonStr);
-        }catch(e){ /* coba cara lain */ }
-      }
-      return null;
-    }
-    function renderReceipt(data){
-      const container = document.getElementById('receipt');
-
-      const computeDurationParts = (d) => {
-        const parseDate = (v) => v ? new Date(v) : null;
-        const entry = parseDate(d.entry) || parseDate(d.masuk);
-        const exit = parseDate(d.exit) || parseDate(d.keluar);
-        let totalMinutes = 0;
-        if (entry && exit && !isNaN(entry) && !isNaN(exit) && exit > entry) {
-          totalMinutes = Math.floor((exit - entry) / 60000);
-        } else if (typeof d.durasi_menit === 'number') {
-          totalMinutes = d.durasi_menit;
-        } else if (typeof d.totalMinutes === 'number') {
-          totalMinutes = d.totalMinutes;
+      <script>
+        // Tema gelap dihapus, cukup render resi
+        function pad(n) {
+          return String(n).padStart(2, "0");
         }
-        const durHours = Math.floor(totalMinutes / 60);
-        const durMins = totalMinutes % 60;
-        const durDays = Math.floor(durHours / 24);
-        const durHoursRem = durHours % 24;
-        return { totalMinutes, durDays, durHoursRem, durMins };
-      };
+        function formatDateTime(dt) {
+          const d = new Date(dt);
+          const tgl = `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`;
+          const jam = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+          return `${tgl} ${jam} WIB`;
+        }
+        function formatIDR(value) {
+          return new Intl.NumberFormat("id-ID", {
+            style: "currency",
+            currency: "IDR",
+            maximumFractionDigits: 0,
+          }).format(value);
+        }
+        function padB64(s) {
+          const padLen = (4 - (s.length % 4)) % 4;
+          return s + "=".repeat(padLen);
+        }
+        function fromBase64UrlToJson(b64url) {
+          const raw = (b64url || "").trim();
+          const attempts = [
+            () => atob(padB64(raw.replace(/-/g, "+").replace(/_/g, "/"))),
+            () => atob(padB64(raw)),
+          ];
+          for (const decode of attempts) {
+            try {
+              const str = decode();
+              const jsonStr = decodeURIComponent(escape(str));
+              return JSON.parse(jsonStr);
+            } catch (e) {
+              /* coba cara lain */
+            }
+          }
+          return null;
+        }
+        function renderReceipt(data) {
+          const container = document.getElementById("receipt");
 
-      const parts = computeDurationParts(data);
+          const computeDurationParts = (d) => {
+            const parseDate = (v) => (v ? new Date(v) : null);
+            const entry = parseDate(d.entry) || parseDate(d.masuk);
+            const exit = parseDate(d.exit) || parseDate(d.keluar);
+            let totalMinutes = 0;
+            if (
+              entry &&
+              exit &&
+              !isNaN(entry) &&
+              !isNaN(exit) &&
+              exit > entry
+            ) {
+              totalMinutes = Math.floor((exit - entry) / 60000);
+            } else if (typeof d.durasi_menit === "number") {
+              totalMinutes = d.durasi_menit;
+            } else if (typeof d.totalMinutes === "number") {
+              totalMinutes = d.totalMinutes;
+            }
+            const durHours = Math.floor(totalMinutes / 60);
+            const durMins = totalMinutes % 60;
+            const durDays = Math.floor(durHours / 24);
+            const durHoursRem = durHours % 24;
+            return { totalMinutes, durDays, durHoursRem, durMins };
+          };
 
-      const html = `
+          const parts = computeDurationParts(data);
+
+          const html = `
         <div class="receipt-header">
           <div>
-            <div class="mono">No. Resi: ${data.id || '-'}</div>
+            <div class="mono">No. Resi: ${data.id || "-"}</div>
             <div class="mono">Total: ${formatIDR(data.total || 0)}</div>
           </div>
           <div>
@@ -85,35 +113,41 @@
           </div>
         </div>
         <div class="kv">
-          <div>Jam masuk</div><div class="mono">${data.masuk || '-'}</div>
-          <div>Jam keluar</div><div class="mono">${data.keluar || '-'}</div>
+          <div>Jam masuk</div><div class="mono">${data.masuk || "-"}</div>
+          <div>Jam keluar</div><div class="mono">${data.keluar || "-"}</div>
           <div>Durasi</div><div><span class="badge">${parts.durDays} Hari ${parts.durHoursRem} Jam ${parts.durMins} Menit</span> (${parts.totalMinutes} menit)</div>
-          <div>Metode</div><div>${data.metode || '-'}</div>
+          <div>Metode</div><div>${data.metode || "-"}</div>
         </div>
       `;
-      container.innerHTML = html;
-    }
-    function init(){
-      const params = new URLSearchParams(window.location.search);
-      const b64url = params.get('data');
-      const receiptEl = document.getElementById('receipt');
-      const printBtn = document.getElementById('printBtn');
-      if (!b64url){
-        receiptEl.innerHTML = '<p>Data resi tidak ditemukan di URL. Silakan hitung ulang dan scan lagi.</p>';
-        if (printBtn) { printBtn.addEventListener('click', ()=> window.print()); }
-        return;
-      }
-      const data = fromBase64UrlToJson(b64url);
-      if (!data){
-        receiptEl.innerHTML = '<p>Gagal memuat data resi. Tautan mungkin rusak.</p>';
-      } else {
-        renderReceipt(data);
-      }
-      if (printBtn) { printBtn.addEventListener('click', ()=> window.print()); }
-    }
-    document.addEventListener('DOMContentLoaded', init);
-  </script>
-  </main>
-  <footer class="site-footer">© 2025 Daffa Rizki Ariyanto</footer>
-</body>
+          container.innerHTML = html;
+        }
+        function init() {
+          const params = new URLSearchParams(window.location.search);
+          const b64url = params.get("data");
+          const receiptEl = document.getElementById("receipt");
+          const printBtn = document.getElementById("printBtn");
+          if (!b64url) {
+            receiptEl.innerHTML =
+              "<p>Data resi tidak ditemukan di URL. Silakan hitung ulang dan scan lagi.</p>";
+            if (printBtn) {
+              printBtn.addEventListener("click", () => window.print());
+            }
+            return;
+          }
+          const data = fromBase64UrlToJson(b64url);
+          if (!data) {
+            receiptEl.innerHTML =
+              "<p>Gagal memuat data resi. Tautan mungkin rusak.</p>";
+          } else {
+            renderReceipt(data);
+          }
+          if (printBtn) {
+            printBtn.addEventListener("click", () => window.print());
+          }
+        }
+        document.addEventListener("DOMContentLoaded", init);
+      </script>
+    </main>
+    <footer class="site-footer">© 2025 Daffa Rizki Ariyanto</footer>
+  </body>
 </html>
