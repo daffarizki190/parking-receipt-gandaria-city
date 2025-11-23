@@ -6,7 +6,8 @@
         Apache Cordova Team
     </author>
     <preference name="android-minSdkVersion" value="21" />
-    <preference name="android-buildToolsVersion" value="36.1.0" />
+    <!-- Gunakan versi build-tools yang stabil dan didukung oleh cordova-android 14 -->
+    <preference name="android-buildToolsVersion" value="34.0.0" />
     <preference name="Orientation" value="portrait" />
     <access origin="*" />
     <allow-navigation href="*" />
