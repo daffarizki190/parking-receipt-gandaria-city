@@ -97,7 +97,7 @@ function buildBreakdown({ firstRate, nextRate, entry, exit, method, vehicle }) {
 
     hourlyRows.push({ label: "Tarif Valet", unit: "1x", subtotal: valetFee });
     hourlyRows.push({
-      label: "Parkir Jam 1",
+      label: "Jam pertama",
       unit: "1 jam",
       subtotal: parkingFee,
     });
@@ -111,7 +111,7 @@ function buildBreakdown({ firstRate, nextRate, entry, exit, method, vehicle }) {
     }
   } else {
     hourlyRows.push({
-      label: "Jam 1",
+      label: "Jam pertama",
       unit: "1 jam",
       subtotal: firstHourCharge,
     });
@@ -641,6 +641,14 @@ window.addEventListener("DOMContentLoaded", () => {
   const historyBtn = document.getElementById("openHistoryBtn");
   if (historyBtn) {
     historyBtn.addEventListener("click", () => {
+      window.location.href = "history.html";
+    });
+  }
+
+  // Tautan teks riwayat di bawah tombol Reset pada form
+  const formHistoryBtn = document.getElementById("formHistoryBtn");
+  if (formHistoryBtn) {
+    formHistoryBtn.addEventListener("click", () => {
       window.location.href = "history.html";
     });
   }
