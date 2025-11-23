@@ -502,6 +502,21 @@ window.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
+  // Navigasi ke halaman riwayat dari tombol aksi dan tautan teks di bawah Reset
+  const openHistoryBtn = document.getElementById("openHistoryBtn");
+  if (openHistoryBtn) {
+    openHistoryBtn.addEventListener("click", () => {
+      window.location.href = "history.html";
+    });
+  }
+
+  const formHistoryBtn = document.getElementById("formHistoryBtn");
+  if (formHistoryBtn) {
+    formHistoryBtn.addEventListener("click", () => {
+      window.location.href = "history.html";
+    });
+  }
 });
 
 window.showTransactionDetails = showTransactionDetails;

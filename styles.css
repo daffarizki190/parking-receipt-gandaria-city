@@ -98,6 +98,7 @@ body::before {
   margin-bottom: 25px;
   box-shadow: var(--shadow-medium);
   transition: all 0.3s ease;
+  position: relative;
 }
 
 .card:hover {
@@ -279,6 +280,103 @@ button.secondary:hover {
   box-shadow: 0 8px 25px rgba(79, 172, 254, 0.6);
 }
 
+/* Icon button (konvensional) */
+.btn.icon,
+button.icon {
+  padding: 10px 16px;
+  min-width: auto;
+  font-size: 14px;
+}
+
+.btn .icon,
+button .icon {
+  width: 0.5cm;
+  height: 0.5cm;
+  display: inline-block;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.btn .icon svg,
+button .icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Header tools: posisi kanan, gaya link konvensional */
+.header-tools {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: white;
+  border: none;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease;
+  font-size: 14px;
+}
+
+.link-btn:hover {
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.link-btn .icon {
+  width: 0.5cm;
+  height: 0.5cm;
+}
+/* Tombol teks sederhana untuk tautan di dalam kartu */
+.text-link-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 0;
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.text-link-btn:hover { color: var(--text-primary); }
+
+/* Ikon riwayat di pojok kartu */
+.card-action {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}
+
+.card-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.card-icon-btn:hover {
+  background: #f1f5f9;
+  color: var(--text-primary);
+}
+
+.card-icon-btn .icon {
+  width: 0.5cm;
+  height: 0.5cm;
+}
+
 /* Grid */
 .kv {
   display: grid;
@@ -424,8 +522,11 @@ section + section {
 .site-footer {
   text-align: center;
   font-size: 12px;
-  color: var(--text-light);
+  color: #ffffff;
   padding: 12px 0;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  opacity: 0.9;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 /* Responsive tweaks */

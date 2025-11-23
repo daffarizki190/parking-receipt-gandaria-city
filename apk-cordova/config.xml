@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="id.gandariacity.parking" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
-    <name>Hitung Cepat</name>
-    <description>Sample Apache Cordova App</description>
+<widget id="id.daffarizki.gandaria.parkmate" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <name>ParkMate Gandaria</name>
+    <description>Aplikasi hitung tarif parkir dan resi untuk Gandaria City.</description>
     <author email="dev@cordova.apache.org" href="https://cordova.apache.org">
         Apache Cordova Team
     </author>
