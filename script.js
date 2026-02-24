@@ -1,669 +1,315 @@
-function formatIDR(value) {
-  return new Intl.NumberFormat("id-ID", {
+/**
+ * script.js — Core Parking Logic
+ * ParkMate Gandaria · clean ES6+
+ */
+
+// ─── Formatters ───────────────────────────────────────────────────
+const formatIDR = (value) =>
+  new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
     maximumFractionDigits: 0,
   }).format(value);
-}
 
-function pad(n) {
-  return String(n).padStart(2, "0");
-}
+const pad = (n) => String(n).padStart(2, "0");
 
-function formatDateTime(dt) {
+const formatDateTime = (dt) => {
+  if (!dt) return "-";
   const d = new Date(dt);
   const tgl = `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`;
   const jam = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
   return `${tgl} ${jam} WIB`;
-}
+};
 
-function calcDurationMinutes(start, end) {
-  const ms = end - start;
-  return Math.floor(ms / 60000);
-}
+const calcDurationMinutes = (start, end) =>
+  Math.floor((end - start) / 60_000);
 
-// Perbarui: dukung beberapa metode perhitungan untuk kejelasan
-function buildBreakdown({ firstRate, nextRate, entry, exit, method, vehicle }) {
+const getVehicleLabel = (vehicleType) => {
+  const labels = {
+    mobil: "🚗 Mobil",
+    motor: "🏍️ Motor",
+    box: "🚛 Box / Truk",
+    valet_weekday: "🎖️ Valet Weekday",
+    valet_weekend: "🎖️ Valet Weekend",
+  };
+  return labels[vehicleType] || vehicleType;
+};
+
+// ─── Tariff Config ────────────────────────────────────────────────
+const TARIFF = {
+  mobil: { firstRate: 5_000, nextRate: 4_000 },
+  motor: { firstRate: 2_000, nextRate: 2_000 },
+  box: { firstRate: 7_000, nextRate: 3_000 },
+  valet_weekday: { firstRate: 75_000 + 5_000, nextRate: 4_000 },
+  valet_weekend: { firstRate: 100_000 + 5_000, nextRate: 4_000 },
+};
+
+// ─── Breakdown Calculation ────────────────────────────────────────
+const buildBreakdown = ({ vehicle, entry, exit }) => {
+  const { firstRate, nextRate } = TARIFF[vehicle] || {};
+  if (!firstRate) return { error: "Jenis kendaraan tidak valid." };
+
   const totalMinutes = calcDurationMinutes(entry, exit);
-  if (isNaN(totalMinutes) || totalMinutes <= 0) {
+  if (isNaN(totalMinutes) || totalMinutes <= 0)
     return { error: "Jam keluar harus lebih besar dari jam masuk." };
-  }
 
   const durHours = Math.floor(totalMinutes / 60);
   const durMins = totalMinutes % 60;
   const durDays = Math.floor(durHours / 24);
   const durHoursRem = durHours % 24;
 
-  const firstHourCharge = firstRate;
   const additionalMinutes = Math.max(0, totalMinutes - 60);
-
-  let units = 0;
-  let unitPrice = 0;
-  let additionalCharge = 0;
-  let methodLabel = "";
-  let formula = "";
-  let unitLabel = "";
-
-  if (additionalMinutes > 0) {
-    switch (method) {
-      case "hourly_up": {
-        units = Math.ceil(additionalMinutes / 60);
-        unitPrice = nextRate;
-        additionalCharge = units * unitPrice;
-        methodLabel = "Per jam (dibulatkan ke atas)";
-        unitLabel = `${units} jam x ${formatIDR(unitPrice)}`;
-        formula = `ceil(${additionalMinutes}/60) × ${formatIDR(nextRate)}`;
-        break;
-      }
-      case "half_hour_up": {
-        units = Math.ceil(additionalMinutes / 30);
-        unitPrice = Math.round(nextRate / 2);
-        additionalCharge = units * unitPrice;
-        methodLabel = "Per 30 menit (dibulatkan ke atas)";
-        unitLabel = `${units} × 30 menit x ${formatIDR(unitPrice)}`;
-        formula = `ceil(${additionalMinutes}/30) × ${formatIDR(Math.round(nextRate / 2))}`;
-        break;
-      }
-      case "per_minute":
-      default: {
-        units = additionalMinutes;
-        unitPrice = Math.round(nextRate / 60);
-        additionalCharge = units * unitPrice;
-        methodLabel = "Per menit (proporsional)";
-        unitLabel = `${units} menit x ${formatIDR(unitPrice)}`;
-        formula = `${additionalMinutes} × ${formatIDR(Math.round(nextRate / 60))}`;
-        break;
-      }
-    }
-  } else {
-    methodLabel =
-      method === "hourly_up"
-        ? "Per jam (dibulatkan ke atas)"
-        : method === "half_hour_up"
-          ? "Per 30 menit (dibulatkan ke atas)"
-          : "Per menit (proporsional)";
-    unitLabel = `0`;
-    formula = "Durasi ≤ 60 menit";
-  }
-
-  const totalCharge = firstHourCharge + additionalCharge;
+  const additionalHours = Math.ceil(additionalMinutes / 60);
+  const additionalCharge = additionalHours * nextRate;
 
   const hourlyRows = [];
 
-  // Khusus untuk valet, pisahkan komponen tarif valet dan parkir
   if (vehicle === "valet_weekday" || vehicle === "valet_weekend") {
-    const valetFee = vehicle === "valet_weekday" ? 75000 : 100000;
-    const parkingFee = 5000;
-
-    hourlyRows.push({ label: "Tarif Valet", unit: "1x", subtotal: valetFee });
-    hourlyRows.push({
-      label: "Jam pertama",
-      unit: "1 jam",
-      subtotal: parkingFee,
-    });
-
+    const valetFee = vehicle === "valet_weekday" ? 75_000 : 100_000;
+    const parkingFee = 5_000;
+    hourlyRows.push({ label: "Tarif Valet", unit: "1×", subtotal: valetFee });
+    hourlyRows.push({ label: "Jam pertama", unit: "1 jam", subtotal: parkingFee });
     if (additionalMinutes > 0) {
       hourlyRows.push({
         label: "Sisa durasi",
-        unit: unitLabel,
+        unit: `${additionalHours} jam × ${formatIDR(nextRate)}`,
         subtotal: additionalCharge,
       });
     }
   } else {
-    hourlyRows.push({
-      label: "Jam pertama",
-      unit: "1 jam",
-      subtotal: firstHourCharge,
-    });
-    hourlyRows.push({
-      label: "Sisa durasi",
-      unit: unitLabel,
-      subtotal: additionalCharge,
-    });
+    hourlyRows.push({ label: "Jam pertama", unit: "1 jam", subtotal: firstRate });
+    if (additionalMinutes > 0) {
+      hourlyRows.push({
+        label: "Sisa durasi",
+        unit: `${additionalHours} jam × ${formatIDR(nextRate)}`,
+        subtotal: additionalCharge,
+      });
+    }
   }
 
-  // Hapus penjelasan pembulatan dari UI sesuai permintaan
-  const explanation = "";
-
+  const totalCharge = firstRate + additionalCharge;
   return {
     totalMinutes,
-    durHours,
-    durMins,
-    durDays,
-    durHoursRem,
-    firstHourCharge,
-    additionalMinutes,
-    units,
-    unitPrice,
-    additionalCharge,
-    totalCharge,
+    durHours, durMins, durDays, durHoursRem,
+    additionalMinutes, additionalHours,
+    additionalCharge, totalCharge,
     hourlyRows,
-    explanation,
-    methodLabel,
-    formula,
+    methodLabel: "Per jam (dibulatkan ke atas)",
   };
-}
+};
 
-// Perbarui tampilan breakdown agar menyertakan metode dan formula
-function renderBreakdown(container, data, ctx) {
-  const { entry, exit, method } = ctx;
-  const html = `
-    <div class="flex-col">
-      <div class="kv">
-        <div>Jam masuk</div>
-        <div class="mono">${formatDateTime(entry)}</div>
-        <div>Jam keluar</div>
-        <div class="mono">${formatDateTime(exit)}</div>
-        <div>Durasi</div>
-        <div><span class="badge">${data.durDays} Hari ${data.durHoursRem} Jam ${data.durMins} Menit</span> (${data.totalMinutes} menit)</div>
-        <div>Metode</div>
-        <div>${data.methodLabel}</div>
+// ─── Renderers ────────────────────────────────────────────────────
+const renderBreakdown = (container, data, { entry, exit }) => {
+  container.innerHTML = `
+    <div class="kv-grid slide-in-bottom">
+      <div class="kv-label">Jam Masuk</div>
+      <div class="kv-value mono">${formatDateTime(entry)}</div>
+      <div class="kv-label">Jam Keluar</div>
+      <div class="kv-value mono">${formatDateTime(exit)}</div>
+      <div class="kv-label">Durasi</div>
+      <div class="kv-value">
+        <span class="badge">${data.durDays}h ${data.durHoursRem}j ${data.durMins}m</span>
+        <span style="color:var(--text-secondary); font-size:0.8rem; margin-left:8px;">(${data.totalMinutes} menit)</span>
       </div>
+      <div class="kv-label">Metode</div>
+      <div class="kv-value" style="font-size:0.85rem;">${data.methodLabel}</div>
+    </div>
 
-      <table class="table">
+    <div style="overflow-x:auto; margin-top:4px;">
+      <table class="data-table">
         <thead>
-          <tr>
-            <th>Komponen</th>
-            <th>Rincian</th>
-            <th>Subtotal</th>
-          </tr>
+          <tr><th>Komponen</th><th>Rincian</th><th>Subtotal</th></tr>
         </thead>
         <tbody>
-          ${data.hourlyRows
-            .map(
-              (row) => `
+          ${data.hourlyRows.map((r) => `
             <tr>
-              <td>${row.label}</td>
-              <td>${row.unit}</td>
-              <td class="mono">${formatIDR(row.subtotal)}</td>
+              <td>${r.label}</td>
+              <td style="color:var(--text-secondary); font-size:0.85rem;">${r.unit}</td>
+              <td class="mono" style="font-weight:500;">${formatIDR(r.subtotal)}</td>
             </tr>
-          `,
-            )
-            .join("")}
+          `).join("")}
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="2">Total</td>
-            <td class="mono">${formatIDR(data.totalCharge)}</td>
+            <td colspan="2">Total Tarif</td>
+            <td class="mono" style="color:var(--text-accent);">${formatIDR(data.totalCharge)}</td>
           </tr>
         </tfoot>
       </table>
-
-      ${data.explanation ? `<small>${data.explanation}</small>` : ""}
     </div>
   `;
-  container.innerHTML = html;
-}
+};
 
-function buildReceipt({ breakdown, entry, exit }) {
+const buildReceiptHTML = ({ breakdown, entry, exit, vehicle }) => {
   const now = new Date();
-  const id = `PKR-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
+  const id = `PKR-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
+  window.__lastReceiptId = id;
 
   return `
-    <div class="receipt">
-      <div class="receipt-header">
+    <div class="receipt-wrapper" id="receiptPrintArea">
+      <div class="receipt-header-row">
         <div>
-          <div class="mono">No. Resi: ${id}</div>
-          <div class="mono">Dibuat: ${formatDateTime(now)}</div>
+          <div class="mono" style="font-size:0.75rem; color:var(--text-secondary);">No. Resi</div>
+          <div class="mono" style="font-weight:600;">${id}</div>
         </div>
-        <div>
-          <strong>Total: ${formatIDR(breakdown.totalCharge)}</strong>
+        <div style="text-align:right;">
+          <div style="font-size:0.75rem; color:var(--text-secondary);">Tanggal Cetak</div>
+          <div class="mono" style="font-size:0.8rem; font-weight:500;">${formatDateTime(now)}</div>
         </div>
       </div>
 
-      <div class="kv">
-        <div>Jam masuk</div>
-        <div class="mono">${formatDateTime(entry)}</div>
-        <div>Jam keluar</div>
-        <div class="mono">${formatDateTime(exit)}</div>
-        <div>Durasi</div>
-        <div>${breakdown.durDays} hari ${breakdown.durHoursRem} jam ${breakdown.durMins} menit (${breakdown.totalMinutes} menit)</div>
-        <div>Metode</div>
-        <div>${breakdown.methodLabel}</div>
+      <div class="kv-grid" style="grid-template-columns:100px 1fr; gap:8px; margin-bottom:16px;">
+        <div class="kv-label">Kendaraan</div><div class="kv-value">${getVehicleLabel(vehicle)}</div>
+        <div class="kv-label">Masuk</div><div class="kv-value mono" style="font-size:0.85rem;">${formatDateTime(entry)}</div>
+        <div class="kv-label">Keluar</div><div class="kv-value mono" style="font-size:0.85rem;">${formatDateTime(exit)}</div>
+        <div class="kv-label">Durasi</div><div class="kv-value" style="font-size:0.85rem;">${breakdown.durDays}h ${breakdown.durHoursRem}j ${breakdown.durMins}m</div>
       </div>
 
-      <hr />
-
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Komponen</th>
-            <th>Rincian</th>
-            <th>Subtotal</th>
-          </tr>
-        </thead>
+      <table class="data-table" style="font-size:0.85rem;">
+        <thead><tr><th>Deskripsi</th><th>Qty</th><th>Subtotal</th></tr></thead>
         <tbody>
-          ${breakdown.hourlyRows
-            .map(
-              (row) => `
+          ${breakdown.hourlyRows.map((r) => `
             <tr>
-              <td>${row.label}</td>
-              <td>${row.unit}</td>
-              <td class="mono">${formatIDR(row.subtotal)}</td>
+              <td>${r.label}</td>
+              <td style="color:var(--text-secondary);">${r.unit}</td>
+              <td class="mono">${formatIDR(r.subtotal)}</td>
             </tr>
-          `,
-            )
-            .join("")}
+          `).join("")}
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="2">Total</td>
-            <td class="mono">${formatIDR(breakdown.totalCharge)}</td>
+            <td colspan="2">Total Bayar</td>
+            <td class="mono" style="color:var(--text-accent); font-size:1.05rem;">${formatIDR(breakdown.totalCharge)}</td>
           </tr>
         </tfoot>
       </table>
-
-      <p><small>${breakdown.explanation}</small></p>
     </div>
   `;
-}
+};
 
-// Fungsi untuk menyimpan riwayat transaksi ke localStorage
-function saveTransactionHistory(breakdown, entry, exit, vehicle) {
-  // Ambil riwayat yang sudah ada
-  let history = JSON.parse(localStorage.getItem("parkingHistory") || "[]");
+// ─── Local Storage ────────────────────────────────────────────────
+const saveTransaction = (breakdown, entry, exit, vehicle) => {
+  const history = JSON.parse(localStorage.getItem("parkingHistory") || "[]");
+  if (history.length >= 50) history.pop();
 
-  // Batasi jumlah riwayat yang disimpan (maksimal 20 transaksi)
-  if (history.length >= 20) {
-    history.pop(); // Hapus transaksi terlama
-  }
-
-  // Buat objek transaksi baru
-  const transaction = {
-    id: `PKR-${new Date().getTime()}`,
+  history.unshift({
+    id: `PKR-${Date.now()}`,
     timestamp: new Date().toISOString(),
-    vehicle: vehicle,
+    vehicle,
     entry: entry.toISOString(),
     exit: exit.toISOString(),
     methodLabel: breakdown.methodLabel,
-    explanation: breakdown.explanation || "",
-    duration: {
-      days: breakdown.durDays,
-      hours: breakdown.durHoursRem,
-      minutes: breakdown.durMins,
-      totalMinutes: breakdown.totalMinutes,
-    },
-    charges: {
-      total: breakdown.totalCharge,
-      breakdown: breakdown.hourlyRows.map((row) => ({
-        label: row.label,
-        unit: row.unit,
-        subtotal: row.subtotal,
-      })),
-    },
-  };
+    duration: breakdown.totalMinutes,
+    total: breakdown.totalCharge,
+  });
 
-  // Tambahkan transaksi baru ke awal array
-  history.unshift(transaction);
-
-  // Simpan kembali ke localStorage
   localStorage.setItem("parkingHistory", JSON.stringify(history));
-}
+};
 
-// Fungsi untuk mendapatkan riwayat transaksi dari localStorage
-function getTransactionHistory() {
-  return JSON.parse(localStorage.getItem("parkingHistory") || "[]");
-}
+// ─── Section Navigation ───────────────────────────────────────────
+const SECTIONS = ["formSection", "qrScanSection", "resultSection", "receiptSection"];
 
-// Fungsi untuk menampilkan riwayat transaksi
-function renderTransactionHistory(container) {
-  const history = getTransactionHistory();
-
-  if (history.length === 0) {
-    container.innerHTML = "<p>Belum ada riwayat transaksi.</p>";
-    return;
-  }
-
-  const html = `
-    <div class="transaction-history">
-      <h3>Riwayat Transaksi Terakhir</h3>
-      <div class="history-list">
-        ${history
-          .map(
-            (transaction, index) => `
-          <div class="history-item card" data-index="${index}">
-            <div class="history-header">
-              <div>
-                <div class="mono">${transaction.id}</div>
-                <div>${new Date(transaction.timestamp).toLocaleString("id-ID")}</div>
-              </div>
-              <div>
-                <strong>${formatIDR(transaction.charges.total)}</strong>
-              </div>
-            </div>
-            <div class="history-details">
-              <div class="kv">
-                <div>Kendaraan</div>
-                <div>${getVehicleLabel(transaction.vehicle)}</div>
-                <div>Durasi</div>
-                <div>${transaction.duration && typeof transaction.duration.days !== "undefined" ? `${transaction.duration.days} Hari ${transaction.duration.hours} Jam ${transaction.duration.minutes} Menit` : `${Math.floor(transaction.duration.totalMinutes / 1440)} Hari ${Math.floor((transaction.duration.totalMinutes % 1440) / 60)} Jam ${transaction.duration.totalMinutes % 60} Menit`}</div>
-                <div>Masuk</div>
-                <div>${formatDateTime(new Date(transaction.entry))}</div>
-                <div>Keluar</div>
-                <div>${formatDateTime(new Date(transaction.exit))}</div>
-              </div>
-              <button class="view-details-btn" data-index="${index}">Lihat Detail</button>
-            </div>
-          </div>
-        `,
-          )
-          .join("")}
-      </div>
-    </div>
-  `;
-
-  container.innerHTML = html;
-
-  // Tambahkan event listener untuk tombol detail
-  const detailButtons = container.querySelectorAll(".view-details-btn");
-  detailButtons.forEach((button) => {
-    button.addEventListener("click", function () {
-      const index = this.getAttribute("data-index");
-      showTransactionDetails(history[index]);
-    });
+const showSection = (targetId) => {
+  SECTIONS.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle("hidden", id !== targetId);
   });
-}
+};
 
-// Fungsi untuk menampilkan detail transaksi
-function showTransactionDetails(transaction) {
-  const modal = document.createElement("div");
-  modal.className = "modal";
-
-  const modalContent = document.createElement("div");
-  modalContent.className = "modal-content";
-
-  modalContent.innerHTML = `
-    <div class="modal-header">
-      <h3>Detail Transaksi</h3>
-      <button class="close-btn">&times;</button>
-    </div>
-    <div class="receipt">
-      <div class="receipt-header">
-        <div>
-          <div class="mono">No. Resi: ${transaction.id}</div>
-          <div class="mono">Dibuat: ${new Date(transaction.timestamp).toLocaleString("id-ID")}</div>
-        </div>
-        <div>
-          <strong>Total: ${formatIDR(transaction.charges.total)}</strong>
-        </div>
-      </div>
-
-      <div class="kv">
-        <div>Kendaraan</div>
-        <div>${getVehicleLabel(transaction.vehicle)}</div>
-        <div>Jam masuk</div>
-        <div class="mono">${formatDateTime(new Date(transaction.entry))}</div>
-        <div>Jam keluar</div>
-        <div class="mono">${formatDateTime(new Date(transaction.exit))}</div>
-        <div>Durasi</div>
-        <div>
-          ${
-            transaction.duration &&
-            typeof transaction.duration.days !== "undefined"
-              ? `${transaction.duration.days} Hari ${transaction.duration.hours} Jam ${transaction.duration.minutes} Menit`
-              : `${Math.floor(transaction.duration.totalMinutes / 1440)} Hari ${Math.floor((transaction.duration.totalMinutes % 1440) / 60)} Jam ${transaction.duration.totalMinutes % 60} Menit`
-          } 
-          (${transaction.duration.totalMinutes} menit)
-        </div>
-        <div>Metode</div>
-        <div>${transaction.methodLabel || "-"}</div>
-      </div>
-
-      ${transaction.explanation ? `<p class="mono" style="margin-top:10px">${transaction.explanation}</p>` : ""}
-
-      <hr />
-
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Komponen</th>
-            <th>Rincian</th>
-            <th>Subtotal</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${transaction.charges.breakdown
-            .map(
-              (row) => `
-            <tr>
-              <td>${row.label}</td>
-              <td>${row.unit}</td>
-              <td class="mono">${formatIDR(row.subtotal)}</td>
-            </tr>
-          `,
-            )
-            .join("")}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="2">Total</td>
-            <td class="mono">${formatIDR(transaction.charges.total)}</td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-  `;
-
-  modal.appendChild(modalContent);
-  document.body.appendChild(modal);
-  // Tampilkan modal
-  modal.style.display = "block";
-
-  // Tambahkan event listener untuk tombol tutup
-  const closeBtn = modal.querySelector(".close-btn");
-  closeBtn.addEventListener("click", function () {
-    document.body.removeChild(modal);
-  });
-
-  // Tutup modal jika mengklik di luar konten
-  modal.addEventListener("click", function (event) {
-    if (event.target === modal) {
-      document.body.removeChild(modal);
-    }
-  });
-  // Tutup dengan tombol ESC
-  document.addEventListener("keydown", function onEsc(e) {
-    if (e.key === "Escape") {
-      if (document.body.contains(modal)) document.body.removeChild(modal);
-      document.removeEventListener("keydown", onEsc);
-    }
-  });
-}
-
-// Fungsi untuk mendapatkan label kendaraan yang lebih deskriptif
-function getVehicleLabel(vehicleType) {
-  const vehicleLabels = {
-    mobil: "Mobil",
-    motor: "Motor",
-    box: "Box",
-    valet_weekday: "Valet Weekday",
-    valet_weekend: "Valet Weekend",
-  };
-
-  return vehicleLabels[vehicleType] || vehicleType;
-}
-
-function openPrintPreview() {
-  const receiptHtml = document.getElementById("receipt").innerHTML;
-  const stylesLink = '<link rel="stylesheet" href="styles.css" />';
-  const win = window.open("", "_blank");
-  if (!win) {
-    alert("Tidak dapat membuka pratinjau cetak (pop-up diblokir?).");
-    return;
-  }
-  win.document.write(
-    `<!DOCTYPE html><html><head><meta charset="UTF-8">${stylesLink}<title>Pratinjau Cetak Resi</title></head><body><section id="receiptSection" class="card">${receiptHtml}</section></body></html>`,
-  );
-  win.document.close();
-  win.focus();
-}
-
-function onSubmit(evt) {
+// ─── Form Submit ──────────────────────────────────────────────────
+const onSubmit = (evt) => {
   evt.preventDefault();
   const vehicle = document.getElementById("vehicleType").value;
-  let firstRate = 0;
-  let nextRate = 0;
-  let method = "hourly_up";
-  if (vehicle === "mobil") {
-    firstRate = 5000;
-    nextRate = 4000;
-    method = "hourly_up";
-  } else if (vehicle === "motor") {
-    firstRate = 2000;
-    nextRate = 2000;
-    method = "hourly_up";
-  } else if (vehicle === "box") {
-    firstRate = 7000;
-    nextRate = 3000;
-    method = "hourly_up";
-  } else if (vehicle === "valet_weekday") {
-    // Valet Weekday: valet 75.000 + parkir 5.000, selanjutnya +4.000/jam
-    firstRate = 75000 + 5000;
-    nextRate = 4000;
-    method = "hourly_up";
-  } else if (vehicle === "valet_weekend") {
-    // Valet Weekend: valet 100.000 + parkir 5.000, selanjutnya +4.000/jam
-    firstRate = 100000 + 5000;
-    nextRate = 4000;
-    method = "hourly_up";
-  }
   const entryVal = document.getElementById("entryTime").value;
   const exitVal = document.getElementById("exitTime").value;
 
-  if (!(entryVal && exitVal)) return;
-  // Tidak perlu validasi input tarif; tarif ditentukan otomatis dari jenis kendaraan
+  if (!vehicle || !entryVal || !exitVal) return;
 
   const entry = new Date(entryVal);
   const exit = new Date(exitVal);
-
-  const breakdown = buildBreakdown({
-    firstRate,
-    nextRate,
-    entry,
-    exit,
-    method,
-    vehicle,
-  });
-  const resultSection = document.getElementById("resultSection");
-  const receiptSection = document.getElementById("receiptSection");
-  const breakdownContainer = document.getElementById("breakdown");
-  const receiptContainer = document.getElementById("receipt");
+  const breakdown = buildBreakdown({ vehicle, entry, exit });
 
   if (breakdown.error) {
-    resultSection.classList.add("hidden");
-    receiptSection.classList.add("hidden");
     alert(breakdown.error);
     return;
   }
 
-  // Tampilkan hanya breakdown; resi tidak langsung ditampilkan
-  renderBreakdown(breakdownContainer, breakdown, { entry, exit, method });
-  resultSection.classList.remove("hidden");
+  renderBreakdown(document.getElementById("breakdown"), breakdown, { entry, exit });
+  showSection("resultSection");
 
-  // Simpan data resi terakhir untuk ditampilkan saat tombol ditekan
-  window.__lastReceiptData = { breakdown, entry, exit };
-  // Sembunyikan resi sampai tombol Buka Resi ditekan
-  receiptSection.classList.add("hidden");
-  receiptContainer.innerHTML = "";
+  window.__lastReceiptData = { breakdown, entry, exit, vehicle };
+  saveTransaction(breakdown, entry, exit, vehicle);
+};
 
-  // Simpan transaksi ke riwayat
-  saveTransactionHistory(breakdown, entry, exit, vehicle);
-
-  // Perbarui tampilan riwayat transaksi
-  // Jangan tampilkan riwayat otomatis di halaman utama
-  const historyContainer = document.getElementById("transactionHistory");
-  if (historyContainer) {
-    // Render hanya jika kontainer ada dan diperlukan kemudian
-    // (mis. setelah tombol Riwayat ditekan jika berada di halaman yang sama)
-  }
-
-  // Tampilkan tombol aksi di bawah detail perhitungan
-  const actionsSection = document.getElementById("actionsSection");
-  if (actionsSection) actionsSection.classList.remove("hidden");
-}
-
-function onReset() {
+const onReset = () => {
   document.getElementById("parkingForm").reset();
-  document.getElementById("resultSection").classList.add("hidden");
-  document.getElementById("receiptSection").classList.add("hidden");
-  const actionsSection = document.getElementById("actionsSection");
-  if (actionsSection) actionsSection.classList.add("hidden");
-}
+  showSection("formSection");
+};
 
-function onPrint() {
-  window.print();
-}
-
-function applyTheme(theme) {
-  const isDark = theme === "dark";
-  document.body.classList.toggle("dark", isDark);
-  const btn = document.getElementById("themeToggle");
-  if (btn) btn.textContent = isDark ? "☀️ Mode Terang" : "🌙 Mode Gelap";
-}
-function toggleTheme() {
-  const current = document.body.classList.contains("dark") ? "dark" : "light";
-  const next = current === "dark" ? "light" : "dark";
-  localStorage.setItem("theme", next);
-  applyTheme(next);
-}
-
+// ─── DOMContentLoaded ─────────────────────────────────────────────
 window.addEventListener("DOMContentLoaded", () => {
-  const parkingForm = document.getElementById("parkingForm");
-  if (parkingForm) {
-    parkingForm.addEventListener("submit", onSubmit);
-  }
+  // Core form
+  document.getElementById("parkingForm")?.addEventListener("submit", onSubmit);
+  document.getElementById("resetBtn")?.addEventListener("click", onReset);
+  document.getElementById("backToFormBtn")?.addEventListener("click", () => showSection("formSection"));
+  document.getElementById("backToResultBtn")?.addEventListener("click", () => showSection("resultSection"));
 
-  const resetBtn = document.getElementById("resetBtn");
-  if (resetBtn) {
-    resetBtn.addEventListener("click", onReset);
-  }
+  // Open Receipt
+  document.getElementById("openReceiptBtn")?.addEventListener("click", () => {
+    const data = window.__lastReceiptData;
+    if (!data) return alert("Hitung tarif dahulu.");
+    const rc = document.getElementById("receipt");
+    rc.innerHTML = buildReceiptHTML(data);
+    showSection("receiptSection");
+    // Generate QR ticket for entry
+    generateEntryQR(data);
+  });
 
-  // Tampilkan resi saat tombol ditekan (tidak otomatis saat submit)
-  const openBtn = document.getElementById("openReceiptBtn");
-  if (openBtn)
-    openBtn.addEventListener("click", () => {
-      const data = window.__lastReceiptData;
-      if (!data) {
-        alert("Hitung tarif dulu untuk membuat resi.");
-        return;
-      }
-      const { breakdown, entry, exit } = data;
-      const receiptHTML = buildReceipt({ breakdown, entry, exit });
-      const rc = document.getElementById("receipt");
-      const rs = document.getElementById("receiptSection");
-      if (rc && rs) {
-        rc.innerHTML = receiptHTML;
-        rs.classList.remove("hidden");
-      }
-    });
-
-  // Navigasi ke halaman riwayat
-  const historyBtn = document.getElementById("openHistoryBtn");
-  if (historyBtn) {
-    historyBtn.addEventListener("click", () => {
-      window.location.href = "history.html";
-    });
-  }
-
-  // Tautan teks riwayat di bawah tombol Reset pada form
-  const formHistoryBtn = document.getElementById("formHistoryBtn");
-  if (formHistoryBtn) {
-    formHistoryBtn.addEventListener("click", () => {
-      window.location.href = "history.html";
-    });
-  }
-
-  // Tampilkan riwayat transaksi saat halaman dimuat
-  const historyContainer = document.getElementById("transactionHistory");
-  if (historyContainer) {
-    // Halaman riwayat khusus akan memanggil render sendiri.
-  }
-
-  // Tidak ada barcode; tidak perlu re-render saat online/offline
+  // Tab navigation
+  document.getElementById("tab-hitung")?.addEventListener("click", () => {
+    setActiveTab("tab-hitung");
+    showSection("formSection");
+  });
+  document.getElementById("tab-scan-qr")?.addEventListener("click", () => {
+    setActiveTab("tab-scan-qr");
+    showSection("qrScanSection");
+  });
 });
 
-// Tombol reset riwayat (digunakan di halaman history)
-function clearTransactionHistory() {
-  localStorage.setItem("parkingHistory", "[]");
-}
-window.clearTransactionHistory = clearTransactionHistory;
+const setActiveTab = (activeId) => {
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.id === activeId);
+    btn.setAttribute("aria-selected", btn.id === activeId);
+  });
+};
+
+// ─── QR Ticket Generator ──────────────────────────────────────────
+const generateEntryQR = ({ entry, exit, vehicle, breakdown }) => {
+  const qrSection = document.getElementById("qrTicketSection");
+  const qrCanvas = document.getElementById("qrTicketCanvas");
+  if (!qrSection || !qrCanvas || typeof QRCode === "undefined") return;
+
+  const payload = JSON.stringify({
+    v: vehicle,
+    e: entry.toISOString(),
+    x: exit.toISOString(),
+    t: breakdown.totalCharge,
+  });
+
+  QRCode.toCanvas(qrCanvas, payload, { width: 160, margin: 1, color: { dark: "#0f172a", light: "#ffffff" } }, (err) => {
+    if (!err) qrSection.classList.remove("hidden");
+  });
+};
+
+// ─── Exposed globals (used by features.js & history page) ─────────
+window.ParkMate = {
+  formatIDR,
+  formatDateTime,
+  getVehicleLabel,
+  buildBreakdown,
+  saveTransaction,
+  showSection,
+  setActiveTab,
+  generateEntryQR,
+  buildReceiptHTML,
+};

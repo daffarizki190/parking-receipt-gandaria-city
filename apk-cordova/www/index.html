@@ -26,13 +26,13 @@
         <h1>ParkMate Gandaria</h1>
       </header>
 
-      <section class="card">
+      <section id="formSection" class="card">
         <h2>Pilih Jenis Kendaraan dan Waktu</h2>
-        <form id="parkingForm">
+        <form id="parkingForm" autocomplete="off">
           <div class="grid">
             <label>
               Jenis kendaraan
-              <select id="vehicleType" required>
+              <select id="vehicleType" required autocomplete="off">
                 <option value="mobil">Mobil</option>
                 <option value="motor">Motor</option>
                 <option value="box">Box/Truk</option>
@@ -43,12 +43,12 @@
 
             <label>
               Jam masuk
-              <input type="datetime-local" id="entryTime" required />
+              <input type="datetime-local" id="entryTime" required autocomplete="off" />
             </label>
 
             <label>
               Jam keluar
-              <input type="datetime-local" id="exitTime" required />
+              <input type="datetime-local" id="exitTime" required autocomplete="off" />
             </label>
           </div>
 
@@ -67,6 +67,9 @@
         <h2>Detail Perhitungan</h2>
         <div id="breakdown"></div>
         <div id="actionsSection" class="actions hidden">
+          <button type="button" id="backToFormBtn" class="ghost">
+            Kembali
+          </button>
           <button type="button" id="openReceiptBtn" class="primary">
             Buka Resi
           </button>
@@ -79,9 +82,29 @@
       <section id="receiptSection" class="card hidden">
         <h2>Resi Parkir</h2>
         <div id="receipt"></div>
-      </section>
-    </main>
+        <div class="actions" style="margin-top:12px">
+          <button type="button" id="backToResultBtn" class="ghost">Kembali</button>
+        </div>
+  </section>
 
+      <section id="historySection" class="card hidden">
+        <h2>Riwayat Transaksi</h2>
+        <div class="actions" style="margin-bottom:12px">
+          <button type="button" id="backFromHistoryBtn" class="ghost">Kembali</button>
+          <button type="button" id="resetHistoryInAppBtn" class="secondary">Reset Riwayat</button>
+        </div>
+        <div id="transactionHistoryApp"></div>
+      </section>
+
+      <section id="detailSection" class="card hidden">
+        <h2>Detail Transaksi</h2>
+        <div id="transactionDetail"></div>
+        <div class="actions" style="margin-top:12px">
+          <button type="button" id="backToHistoryBtn" class="ghost">Kembali</button>
+        </div>
+      </section>
+  </main>
+    <script src="cordova.js"></script>
     <script src="script.js"></script>
     <footer class="site-footer">© 2025 Daffa Rizki Ariyanto</footer>
   </body>

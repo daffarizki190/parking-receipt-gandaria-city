@@ -1,52 +1,63 @@
-# Aplikasi Tarif Parkir
+# Aplikasi Tarif Parkir (AI + React SPA)
 
-Aplikasi web untuk menghitung tarif parkir secara cepat dan akurat, dilengkapi tampilan resi yang dapat dicetak dan riwayat transaksi.
+Aplikasi web untuk menghitung tarif parkir Gandaria City secara cepat dan cerdas. Proyek ini telah berevolusi menjadi sebuah **Single Page Application (SPA)** menggunakan **React, Vite, dan Tailwind CSS**, serta dilengkapi dengan fitur-fitur Kecerdasan Buatan (AI).
 
-## Cerita di Balik Proyek
+## 🚀 Fitur Inovasi Unggulan
 
-Saya membuat aplikasi ini untuk membantu teman kerja saya yang mengalami kesulitan dalam menghitung tarif parkir. Dengan banyaknya aturan per jam dan variasi tarif, perhitungan manual sering memakan waktu dan rawan salah. Aplikasi ini hadir untuk menyederhanakan proses, meningkatkan ketelitian, dan menyajikan hasil yang mudah dipahami.
+- **Deteksi Kendaraan AI**: Gunakan kamera (didukung oleh TensorFlow `COCO-SSD`) untuk mendeteksi mobil/motor secara otomatis.
+- **Perintah Suara (Voice Command)**: Gunakan Web Speech API untuk mengontrol fitur menggunakan suara berbahasa Indonesia.
+- **Scanner Karcis QR**: Dilengkapi karcis QR pintar saat masuk dan pemindai interaktif saat keluar.
+- **Prediksi Kepadatan AI**: Mempelajari histori riwayat parkir lokal untuk memprediksi jam-jam sibuk.
+- **Dashboard Analitik (Live Chart)**: Manajemen riwayat transaksi dengan Visualisasi Data (*Chart.js*).
+- **Share & Ekspor Resi**: Kirim detail tagihan ke WhatsApp dengan sekali klik, atau unduh resi sebagai gambar berkat `html2canvas`.
 
-## Penjelasan Singkat Proyek
+## 🛠️ Tech Stack & Arsitektur
 
-- Menghitung tarif parkir berbasis durasi (jam pertama dan jam berikutnya)
-- Menampilkan resi yang bisa dicetak untuk keperluan dokumentasi
-- Menyimpan riwayat transaksi di perangkat (localStorage)
-- Tampilan responsif yang mudah digunakan di perangkat desktop maupun mobile
-- Tersedia aset untuk penggunaan di Android melalui Cordova
+- **Framework**: `React 18` + `Vite`
+- **Styling**: `Tailwind CSS v3` (Tema Glassmorphism)
+- **Routing**: `React Router v6`
+- **AI & ML**: `@tensorflow/tfjs`, `@tensorflow-models/coco-ssd`
+- **Utility**: `jsQR`, `qrcode`, `html2canvas`, `chart.js`, `lucide-react`
 
-## Cara Menjalankan
+## 📦 Menjalankan Secara Lokal
 
-Gunakan salah satu opsi berikut untuk menjalankan secara lokal:
+Pastikan Anda memiliki [Node.js](https://nodejs.org/) terinstal (rekomendasi: versi 18 ke atas).
 
 ```bash
-# Opsi 1: Python (simple HTTP server)
-python -m http.server 8000
-# Buka: http://localhost:8000/
+# Clone repository
+git clone https://github.com/daffarizki190/parking-receipt-gandaria-city.git
+cd parking-receipt-gandaria-city
 
-# Opsi 2: Node.js (http-server)
-npx http-server -p 8080
-# Buka: http://127.0.0.1:8080/
+# Install dependensi
+npm install
+
+# Jalankan server pengembangan Vite
+npm run dev
 ```
 
-## Struktur Proyek
+Buka `http://localhost:5173` di browser Anda.
 
-```
-├── index.html       # Halaman utama
-├── history.html     # Riwayat transaksi
-├── receipt.html     # Tampilan resi
-├── script.js        # Logika aplikasi (web)
-├── styles.css       # Gaya global
-└── apk-cordova/     # Aset untuk aplikasi Android (Cordova)
-    └── www/
-```
+## 🌍 Cara Mengonline-kan (Platform Deployment)
 
-## Cara Menggunakan
+Aplikasi ini sudah dikonfigurasi sepenuhnya untuk kemudahan *Deployment* berkelanjutan.
 
-- Pilih jenis kendaraan dan isi jam masuk/keluar
-- Klik `Hitung Tarif` untuk melihat rincian perhitungan
-- Klik `Buka Resi` untuk menampilkan resi dan mencetak
-- Buka `Riwayat Transaksi` untuk melihat transaksi sebelumnya
+### Opsi 1: Vercel (Sangat Disarankan)
+
+Aplikasi ini sudah berisi file konfigurasi `vercel.json` dan otomatis akan beradaptasi.
+1. Masuk ke [Vercel Dashboard](https://vercel.com/dashboard).
+2. Klik **Add New Project** dan import repositori GitHub ini.
+3. Vercel akan otomatis mendeteksi bahwa ini adalah proyek `Vite`.
+   - Build Command: `npm run build`
+   - Output Directory: `dist`
+4. Klik **Deploy**. Selesai!
+
+### Opsi 2: GitHub Pages (Otomatis Action)
+
+Proyek ini juga sudah memuat konfigurasi **GitHub Actions** (`.github/workflows/deploy-react.yml`).
+1. Cukup lakukan `git push` ke branch `feature/react-migration` atau `main`.
+2. Action akan otomatis berjalan dan me-*compile* *build* ke GitHub Pages.
+3. Pastikan Anda mengaktifkan **Settings > Pages > Source:** `GitHub Actions`.
 
 ## Lisensi
 
-MIT License — bebas digunakan dan dimodifikasi sesuai kebutuhan.
+MIT License — bebas digunakan dan dimodifikasi sesuai kebutuhan pendidikan.
