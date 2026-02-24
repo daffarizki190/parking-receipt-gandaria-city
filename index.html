@@ -26,7 +26,7 @@
         <h1>ParkMate Gandaria</h1>
       </header>
 
-      <section class="card">
+      <section id="formSection" class="card">
         <h2>Pilih Jenis Kendaraan dan Waktu</h2>
         <form id="parkingForm">
           <div class="grid">
@@ -67,6 +67,9 @@
         <h2>Detail Perhitungan</h2>
         <div id="breakdown"></div>
         <div id="actionsSection" class="actions hidden">
+          <button type="button" id="backToFormBtn" class="ghost">
+            Kembali
+          </button>
           <button type="button" id="openReceiptBtn" class="primary">
             Buka Resi
           </button>
@@ -79,6 +82,9 @@
       <section id="receiptSection" class="card hidden">
         <h2>Resi Parkir</h2>
         <div id="receipt"></div>
+        <div class="actions" style="margin-top:12px">
+          <button type="button" id="backToResultBtn" class="ghost">Kembali</button>
+        </div>
       </section>
 
       <section id="historySection" class="card hidden">

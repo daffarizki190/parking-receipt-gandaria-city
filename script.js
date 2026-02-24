@@ -556,9 +556,8 @@ function onSubmit(evt) {
     return;
   }
 
-  // Tampilkan hanya breakdown; resi tidak langsung ditampilkan
   renderBreakdown(breakdownContainer, breakdown, { entry, exit, method });
-  resultSection.classList.remove("hidden");
+  showSlide("resultSection");
 
   // Simpan data resi terakhir untuk ditampilkan saat tombol ditekan
   window.__lastReceiptData = { breakdown, entry, exit };
@@ -630,10 +629,9 @@ window.addEventListener("DOMContentLoaded", () => {
       const { breakdown, entry, exit } = data;
       const receiptHTML = buildReceipt({ breakdown, entry, exit });
       const rc = document.getElementById("receipt");
-      const rs = document.getElementById("receiptSection");
-      if (rc && rs) {
+      if (rc) {
         rc.innerHTML = receiptHTML;
-        rs.classList.remove("hidden");
+        showSlide("receiptSection");
       }
     });
 
@@ -653,6 +651,20 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  const backToFormBtn = document.getElementById("backToFormBtn");
+  if (backToFormBtn) {
+    backToFormBtn.addEventListener("click", () => {
+      showSlide("formSection");
+    });
+  }
+
+  const backToResultBtn = document.getElementById("backToResultBtn");
+  if (backToResultBtn) {
+    backToResultBtn.addEventListener("click", () => {
+      showSlide("resultSection");
+    });
+  }
+
   // Tampilkan riwayat transaksi saat halaman dimuat
   const historyContainer = document.getElementById("transactionHistory");
   if (historyContainer) {
@@ -667,3 +679,21 @@ function clearTransactionHistory() {
   localStorage.setItem("parkingHistory", "[]");
 }
 window.clearTransactionHistory = clearTransactionHistory;
+
+function showSlide(targetId) {
+  const sections = [
+    document.getElementById("formSection"),
+    document.getElementById("resultSection"),
+    document.getElementById("receiptSection"),
+    document.getElementById("historySection"),
+  ].filter(Boolean);
+  sections.forEach((el) => {
+    if (el.id === targetId) {
+      el.classList.remove("hidden");
+      el.classList.add("slide-active");
+    } else {
+      el.classList.add("hidden");
+      el.classList.remove("slide-active");
+    }
+  });
+}

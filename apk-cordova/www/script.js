@@ -23,7 +23,7 @@ function calcDurationMinutes(start, end) {
 }
 
 // Perbarui: dukung beberapa metode perhitungan untuk kejelasan
-function buildBreakdown({ firstRate, nextRate, entry, exit, method, vehicle }) {
+function buildBreakdown({ firstRate, nextRate, entry, exit, method, vehicle, baseFee = 0 }) {
   const totalMinutes = calcDurationMinutes(entry, exit);
   if (isNaN(totalMinutes) || totalMinutes <= 0) {
     return { error: "Jam keluar harus lebih besar dari jam masuk." };
@@ -45,7 +45,7 @@ function buildBreakdown({ firstRate, nextRate, entry, exit, method, vehicle }) {
   let unitLabel = "";
 
   if (method === "hourly") {
-    units = Math.max(0, durHours - 1);
+    units = Math.max(0, Math.ceil(additionalMinutes / 60));
     unitPrice = nextRate;
     additionalCharge = units * unitPrice;
     methodLabel = "Per jam";
@@ -68,9 +68,12 @@ function buildBreakdown({ firstRate, nextRate, entry, exit, method, vehicle }) {
     unitLabel = "menit";
   }
 
-  const totalCharge = firstHourCharge + additionalCharge;
+  const totalCharge = baseFee + firstHourCharge + additionalCharge;
 
   const hourlyRows = [];
+  if (baseFee > 0) {
+    hourlyRows.push({ label: "Biaya valet", unit: "-", subtotal: baseFee });
+  }
   hourlyRows.push({
     label: "Jam pertama",
     unit: "1 jam",
@@ -115,26 +118,27 @@ function renderBreakdown(container, data, ctx) {
   }
 
   const rows = data.hourlyRows
-    .map(
-      (row) =>
-        `<tr><td>${row.label}</td><td>${row.unit}</td><td>${formatIDR(row.subtotal)}</td></tr>`,
-    )
+    .map((row) => {
+      let rincian = row.unit;
+      if (row.label.startsWith("Tambahan") && data.units > 0) {
+        rincian = `${data.units} ${data.unitLabel || "jam"} × ${formatIDR(data.unitPrice)}`;
+      }
+      return `<tr><td>${row.label}</td><td>${rincian}</td><td>${formatIDR(row.subtotal)}</td></tr>`;
+    })
     .join("");
 
   container.innerHTML = `
     <div class="breakdown-header">
       <h3>Detail Perhitungan</h3>
-      <p><strong>Metode:</strong> ${data.methodLabel}</p>
-      <p><strong>Formula:</strong> ${data.formula}</p>
     </div>
     <div class="time-info">
-      <p><strong>Masuk:</strong> ${formatDateTime(entry)}</p>
-      <p><strong>Keluar:</strong> ${formatDateTime(exit)}</p>
-      <p><strong>Durasi:</strong> ${durationText}</p>
+      <p><strong>Jam masuk</strong><br/><span class="mono">${formatDateTime(entry)}</span></p>
+      <p style="margin-top:8px"><strong>Jam keluar</strong><br/><span class="mono">${formatDateTime(exit)}</span></p>
+      <p style="margin-top:8px"><strong>Durasi</strong><br/><span class="chip">${durationText}</span> <span class="mono">(${data.totalMinutes} menit)</span></p>
     </div>
     <table class="breakdown-table">
       <thead>
-        <tr><th>Komponen</th><th>Unit</th><th>Subtotal</th></tr>
+        <tr><th>Komponen</th><th>Rincian</th><th>Subtotal</th></tr>
       </thead>
       <tbody>
         ${rows}
@@ -146,7 +150,6 @@ function renderBreakdown(container, data, ctx) {
         </tr>
       </tfoot>
     </table>
-    <p class="explanation">${data.explanation}</p>
   `;
 }
 
@@ -187,10 +190,6 @@ function buildReceipt({ breakdown, entry, exit }) {
       <div class="detail-row">
         <span>Durasi:</span>
         <span>${durationText}</span>
-      </div>
-      <div class="detail-row">
-        <span>Metode:</span>
-        <span>${breakdown.methodLabel}</span>
       </div>
     </div>
 
@@ -251,6 +250,8 @@ function renderTransactionHistory(container) {
     return;
   }
 
+  const totalAmount = history.reduce((sum, t) => sum + (t.total || 0), 0);
+
   const rows = history
     .map(
       (transaction) => `
@@ -258,7 +259,6 @@ function renderTransactionHistory(container) {
       <td>${new Date(transaction.timestamp).toLocaleDateString("id-ID")}</td>
       <td>${transaction.vehicle}</td>
       <td>${transaction.duration}</td>
-      <td>${transaction.method}</td>
       <td>${formatIDR(transaction.total)}</td>
     </tr>
   `,
@@ -270,16 +270,18 @@ function renderTransactionHistory(container) {
       <h3>Riwayat Transaksi</h3>
       <button onclick="clearTransactionHistory()" class="clear-history-btn">Hapus Semua</button>
     </div>
+    <div class="history-summary" style="margin-bottom:12px;color:var(--text-secondary);font-weight:600">
+      ${history.length} transaksi • Total ${formatIDR(totalAmount)}
+    </div>
     <div class="history-table-container">
-      <table class="history-table">
+      <table class="table history-table">
         <thead>
-          <tr>
-            <th>Tanggal</th>
-            <th>Kendaraan</th>
-            <th>Durasi</th>
-            <th>Metode</th>
-            <th>Total</th>
-          </tr>
+        <tr>
+          <th>Tanggal</th>
+          <th>Kendaraan</th>
+          <th>Durasi</th>
+          <th>Total</th>
+        </tr>
         </thead>
         <tbody>
           ${rows}
@@ -306,6 +308,19 @@ function showTransactionDetails(transactionId) {
     entry,
     exit,
   });
+
+  const detailContainer = document.getElementById("transactionDetail");
+  const detailSection = document.getElementById("detailSection");
+  if (detailContainer && detailSection) {
+    const historySection = document.getElementById("historySection");
+    if (historySection) {
+      historySection.classList.add("hidden");
+      historySection.classList.remove("slide-active");
+    }
+    detailContainer.innerHTML = receipt;
+    showSlide("detailSection");
+    return;
+  }
 
   // Buat modal untuk menampilkan detail
   const modal = document.createElement("div");
@@ -354,7 +369,7 @@ function onSubmit(evt) {
   evt.preventDefault();
 
   const vehicleType = document.getElementById("vehicleType").value;
-  const { firstRate, nextRate, method, vehicle } = getVehicleRates(vehicleType);
+  const { firstRate, nextRate, method, vehicle, baseFee } = getVehicleRates(vehicleType);
 
   const entryVal = document.getElementById("entryTime").value;
   const exitVal = document.getElementById("exitTime").value;
@@ -371,6 +386,7 @@ function onSubmit(evt) {
     exit,
     method,
     vehicle,
+    baseFee,
   });
   const resultSection = document.getElementById("resultSection");
   const receiptSection = document.getElementById("receiptSection");
@@ -385,7 +401,7 @@ function onSubmit(evt) {
   }
 
   renderBreakdown(breakdownContainer, breakdown, { entry, exit, method });
-  resultSection.classList.remove("hidden");
+  showSlide("resultSection");
 
   window.__lastReceiptData = { breakdown, entry, exit };
   receiptSection.classList.add("hidden");
@@ -403,6 +419,7 @@ function onReset() {
   document.getElementById("receiptSection").classList.add("hidden");
   const actionsSection = document.getElementById("actionsSection");
   if (actionsSection) actionsSection.classList.add("hidden");
+  showSlide("formSection");
 }
 
 function onPrint() {
@@ -436,26 +453,28 @@ function getVehicleRates(vehicleType) {
   const rates = {
     mobil: {
       firstRate: 5000,
-      nextRate: 3000,
+      nextRate: 4000,
       method: "hourly",
       vehicle: "mobil",
     },
     motor: {
       firstRate: 2000,
-      nextRate: 1000,
+      nextRate: 2000,
       method: "hourly",
       vehicle: "motor",
     },
-    box: { firstRate: 10000, nextRate: 5000, method: "hourly", vehicle: "box" },
+    box: { firstRate: 7000, nextRate: 3000, method: "hourly", vehicle: "box" },
     valet_weekday: {
-      firstRate: 25000,
-      nextRate: 5000,
+      baseFee: 75000,
+      firstRate: 5000,
+      nextRate: 4000,
       method: "hourly",
       vehicle: "valet_weekday",
     },
     valet_weekend: {
-      firstRate: 30000,
-      nextRate: 5000,
+      baseFee: 100000,
+      firstRate: 5000,
+      nextRate: 4000,
       method: "hourly",
       vehicle: "valet_weekend",
     },
@@ -477,47 +496,120 @@ window.addEventListener("DOMContentLoaded", () => {
   const savedTheme = localStorage.getItem("theme") || "light";
   applyTheme(savedTheme);
 
-  const now = new Date();
-  const entryTime = document.getElementById("entryTime");
-  const exitTime = document.getElementById("exitTime");
+  showSlide("formSection");
 
-  if (entryTime && exitTime) {
-    const entryDefault = new Date(now.getTime() - 2 * 60 * 60 * 1000);
-    entryTime.value = entryDefault.toISOString().slice(0, 16);
-    exitTime.value = now.toISOString().slice(0, 16);
-  }
+  const entryCtl = document.getElementById("entryTime");
+  const exitCtl = document.getElementById("exitTime");
+  if (entryCtl) entryCtl.value = "";
+  if (exitCtl) exitCtl.value = "";
 
-  const showReceiptBtn = document.getElementById("showReceiptBtn");
-  if (showReceiptBtn) {
-    showReceiptBtn.addEventListener("click", () => {
+  const openReceiptBtn = document.getElementById("openReceiptBtn");
+  if (openReceiptBtn) {
+    openReceiptBtn.addEventListener("click", () => {
       if (window.__lastReceiptData) {
         const { breakdown, entry, exit } = window.__lastReceiptData;
         const receiptContainer = document.getElementById("receipt");
         const receiptSection = document.getElementById("receiptSection");
 
         receiptContainer.innerHTML = buildReceipt({ breakdown, entry, exit });
-        receiptSection.classList.remove("hidden");
+        showSlide("receiptSection");
       } else {
         alert("Belum ada data resi. Hitung tarif terlebih dahulu.");
       }
     });
   }
 
-  // Navigasi ke halaman riwayat dari tombol aksi dan tautan teks di bawah Reset
+  // Navigasi riwayat sebagai slide mandiri
   const openHistoryBtn = document.getElementById("openHistoryBtn");
   if (openHistoryBtn) {
     openHistoryBtn.addEventListener("click", () => {
-      window.location.href = "history.html";
+      const prev = document.getElementById("resultSection").classList.contains("hidden")
+        ? "formSection"
+        : "resultSection";
+      window.__prevSlide = prev;
+      const container = document.getElementById("transactionHistoryApp");
+      if (container) {
+        renderTransactionHistory(container);
+        showSlide("historySection");
+      } else {
+        window.location.href = "history.html";
+      }
     });
   }
 
   const formHistoryBtn = document.getElementById("formHistoryBtn");
   if (formHistoryBtn) {
     formHistoryBtn.addEventListener("click", () => {
-      window.location.href = "history.html";
+      window.__prevSlide = "formSection";
+      const container = document.getElementById("transactionHistoryApp");
+      if (container) {
+        renderTransactionHistory(container);
+        showSlide("historySection");
+      } else {
+        window.location.href = "history.html";
+      }
+    });
+  }
+
+  const backToFormBtn = document.getElementById("backToFormBtn");
+  if (backToFormBtn) {
+    backToFormBtn.addEventListener("click", () => {
+      showSlide("formSection");
+    });
+  }
+
+  const backToResultBtn = document.getElementById("backToResultBtn");
+  if (backToResultBtn) {
+    backToResultBtn.addEventListener("click", () => {
+      showSlide("resultSection");
+    });
+  }
+
+  const backFromHistoryBtn = document.getElementById("backFromHistoryBtn");
+  if (backFromHistoryBtn) {
+    backFromHistoryBtn.addEventListener("click", () => {
+      const prev = window.__prevSlide || "formSection";
+      showSlide(prev);
+    });
+  }
+
+  const resetHistoryInAppBtn = document.getElementById("resetHistoryInAppBtn");
+  if (resetHistoryInAppBtn) {
+    resetHistoryInAppBtn.addEventListener("click", () => {
+      if (confirm("Hapus semua riwayat transaksi?")) {
+        clearTransactionHistory();
+        const container = document.getElementById("transactionHistoryApp");
+        if (container) renderTransactionHistory(container);
+      }
+    });
+  }
+
+  const backToHistoryBtn = document.getElementById("backToHistoryBtn");
+  if (backToHistoryBtn) {
+    backToHistoryBtn.addEventListener("click", () => {
+      showSlide("historySection");
     });
   }
 });
+
+function showSlide(targetId) {
+  const sections = [
+    document.getElementById("formSection"),
+    document.getElementById("resultSection"),
+    document.getElementById("receiptSection"),
+    document.getElementById("historySection"),
+    document.getElementById("detailSection"),
+  ].filter(Boolean);
+  sections.forEach((el) => {
+    if (el.id === targetId) {
+      el.classList.remove("hidden");
+      el.classList.add("slide-active");
+    } else {
+      el.classList.add("hidden");
+      el.classList.remove("slide-active");
+    }
+  });
+}
 
 window.showTransactionDetails = showTransactionDetails;
 
