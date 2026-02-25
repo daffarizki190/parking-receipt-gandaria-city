@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Calculator, Camera, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { Calculator, Camera, ChevronDown, ChevronUp, Info, Sun, Moon } from 'lucide-react';
 import FormSection from '../components/FormSection';
-import QRScanner from '../components/QRScanner';
 import ReceiptSection from '../components/ReceiptSection';
 import AIPrediction from '../components/AIPrediction';
 import { buildBreakdown, saveTransaction, formatIDR, TARIFF } from '../lib/parkingLogic';
 
 /* ── Live Clock ──────────────────────────────────── */
-function LiveClock() {
+function LiveClock({ isDarkMode, toggleDarkMode }) {
     const [time, setTime] = useState(new Date());
     useEffect(() => {
         const t = setInterval(() => setTime(new Date()), 1000);
@@ -30,8 +29,13 @@ function LiveClock() {
                 </div>
             </div>
             <div className="text-right flex flex-col items-end">
-                <div className="chip chip-amber mb-1" style={{ background: '#fef3c7', color: '#b45309', borderColor: '#fde68a' }}>WIB</div>
-                <p className="text-[10px] text-slate-400 font-medium">Jakarta, ID</p>
+                <div className="flex items-center gap-3 mb-1">
+                    <button onClick={toggleDarkMode} className="text-slate-400 hover:text-indigo-500 transition-colors bg-white/50 p-1.5 rounded-full border border-slate-200 shadow-sm dark:bg-slate-800 dark:border-slate-700">
+                        {isDarkMode ? <Sun size={14} className="text-amber-500" /> : <Moon size={14} className="text-indigo-500" />}
+                    </button>
+                    <div className="chip chip-amber" style={{ background: '#fef3c7', color: '#b45309', borderColor: '#fde68a' }}>WIB</div>
+                </div>
+                <p className="text-[10px] text-slate-400 font-medium pb-0.5">Jakarta, ID</p>
             </div>
         </div>
     );
@@ -42,8 +46,8 @@ const TARIFF_GUIDE = [
     { emoji: '🏍️', name: 'Motor', first: TARIFF.motor.firstRate, next: TARIFF.motor.nextRate },
     { emoji: '🚗', name: 'Mobil', first: TARIFF.mobil.firstRate, next: TARIFF.mobil.nextRate },
     { emoji: '🚛', name: 'Box/Truk', first: TARIFF.box.firstRate, next: TARIFF.box.nextRate },
-    { emoji: '🎖️', name: 'Valet WD', first: 75000, next: TARIFF.valet_weekday.nextRate, note: '+Rp5K/jam' },
-    { emoji: '🎖️', name: 'Valet WE', first: 100000, next: TARIFF.valet_weekend.nextRate, note: '+Rp5K/jam' },
+    { emoji: '🚗', name: 'Valet WD', first: 75000, next: TARIFF.valet_weekday.nextRate, note: '+Rp5K/jam' },
+    { emoji: '🚗', name: 'Valet WE', first: 100000, next: TARIFF.valet_weekend.nextRate, note: '+Rp5K/jam' },
 ];
 
 function TariffGuide() {
@@ -95,10 +99,10 @@ function ResultCard({ result, onShowReceipt, onReset }) {
 
             <div className="p-5">
                 <div className="flex items-center justify-between mb-5">
-                    <h3 className="font-bold text-lg text-slate-800" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+                    <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
                         Hasil Kalkulasi
                     </h3>
-                    <div className="chip chip-green bg-emerald-100/50">✓ Selesai</div>
+                    <div className="chip chip-green bg-emerald-100/50 dark:bg-emerald-500/20">✓ Selesai</div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 mb-5">
@@ -107,29 +111,29 @@ function ResultCard({ result, onShowReceipt, onReset }) {
                         { label: 'Keluar', value: new Date(result.exit).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) },
                         { label: 'Durasi', value: `${breakdown.durDays > 0 ? breakdown.durDays + 'h ' : ''}${breakdown.durHoursRem}j ${breakdown.durMins}m` },
                     ].map(({ label, value }) => (
-                        <div key={label} className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col items-center justify-center">
+                        <div key={label} className="bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 rounded-xl p-3 flex flex-col items-center justify-center">
                             <span className="text-[9px] text-slate-400 font-bold tracking-widest uppercase mb-1">{label}</span>
-                            <span className="text-xs font-black font-mono text-slate-700">{value}</span>
+                            <span className="text-xs font-black font-mono text-slate-700 dark:text-slate-200">{value}</span>
                         </div>
                     ))}
                 </div>
 
                 {/* Breakdown rows */}
-                <div className="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm mb-5">
-                    <div className="grid grid-cols-[1fr_auto] gap-x-4 px-4 py-2.5 bg-slate-50 border-b border-slate-200 text-[10px] text-slate-500 uppercase tracking-widest font-bold">
+                <div className="bg-white dark:bg-slate-800/80 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm mb-5">
+                    <div className="grid grid-cols-[1fr_auto] gap-x-4 px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-bold">
                         <span>Komponen Biaya</span><span className="text-right">Subtotal</span>
                     </div>
                     {breakdown.hourlyRows.map((r, i) => (
-                        <div key={i} className="grid grid-cols-[1fr_auto] gap-x-4 px-4 py-3 border-b border-slate-100 last:border-0 items-center">
+                        <div key={i} className="grid grid-cols-[1fr_auto] gap-x-4 px-4 py-3 border-b border-slate-100 dark:border-slate-700/50 last:border-0 items-center">
                             <div>
-                                <p className="text-sm font-semibold text-slate-700">{r.label}</p>
+                                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{r.label}</p>
                                 <p className="text-[10px] text-slate-400 font-mono mt-0.5">{r.unit}</p>
                             </div>
-                            <span className="font-mono text-sm font-medium text-slate-600 bg-slate-50 px-2 py-1 rounded-md">{formatIDR(r.subtotal)}</span>
+                            <span className="font-mono text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 px-2 py-1 rounded-md">{formatIDR(r.subtotal)}</span>
                         </div>
                     ))}
-                    <div className="grid grid-cols-[1fr_auto] gap-x-4 px-4 py-4 bg-indigo-50/50 border-t border-indigo-100 items-center">
-                        <span className="text-xs font-black text-indigo-900 uppercase tracking-widest">Total Bayar</span>
+                    <div className="grid grid-cols-[1fr_auto] gap-x-4 px-4 py-4 bg-indigo-50/50 dark:bg-indigo-900/20 border-t border-indigo-100 dark:border-indigo-800/50 items-center">
+                        <span className="text-xs font-black text-indigo-900 dark:text-indigo-200 uppercase tracking-widest">Total Bayar</span>
                         <span className="total-amount drop-shadow-sm">
                             {formatIDR(breakdown.totalCharge)}
                         </span>
@@ -149,23 +153,37 @@ function ResultCard({ result, onShowReceipt, onReset }) {
 
 /* ── Main Page ───────────────────────────────────── */
 export default function Home() {
-    const [activeTab, setActiveTab] = useState('kalkulator');
-    const [scannedData, setScannedData] = useState(null);
     const [result, setResult] = useState(null);
     const [showReceipt, setShowReceipt] = useState(false);
+    const [isDarkMode, setIsDarkMode] = useState(() => {
+        return localStorage.getItem('theme') === 'dark';
+    });
 
-    const handleFormSubmit = ({ vehicle, entry, exit }) => {
-        const breakdown = buildBreakdown({ vehicle, entry, exit });
-        if (breakdown.error) { alert(breakdown.error); return; }
-        saveTransaction(breakdown, entry, exit, vehicle);
-        setResult({ breakdown, entry, exit, vehicle });
+    useEffect(() => {
+        if (isDarkMode) {
+            document.body.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            document.body.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+        }
+    }, [isDarkMode]);
+
+    const handleFormSubmit = ({ vehicle, plate, entry, exit, isLostTicket }) => {
+        console.log("Home handleFormSubmit received:", { vehicle, plate, entry, exit, isLostTicket });
+        const breakdown = buildBreakdown({ vehicle, entry, exit, isLostTicket });
+        console.log("Breakdown result:", breakdown);
+        if (breakdown.error) {
+            console.error("Breakdown error:", breakdown.error);
+            alert(breakdown.error);
+            return;
+        }
+        console.log("Saving transaction and setting result");
+        saveTransaction(breakdown, entry, exit, vehicle, plate, isLostTicket);
+        setResult({ breakdown, entry, exit, vehicle, plate, isLostTicket });
         setShowReceipt(false);
     };
 
-    const handleScanSuccess = (data) => {
-        setScannedData(data);
-        setTimeout(() => setActiveTab('kalkulator'), 800);
-    };
 
     if (showReceipt && result) {
         return <ReceiptSection data={result} onClose={() => setShowReceipt(false)} />;
@@ -174,30 +192,16 @@ export default function Home() {
     return (
         <div className="flex flex-col gap-5">
             {/* Live Clock */}
-            <LiveClock />
+            <LiveClock isDarkMode={isDarkMode} toggleDarkMode={() => setIsDarkMode(!isDarkMode)} />
 
             {/* AI Prediction */}
             <AIPrediction />
 
-            {/* Tab Nav */}
-            <div className="flex bg-slate-200/50 p-1 rounded-[14px] shadow-inner-soft backdrop-blur-md">
-                <button onClick={() => setActiveTab('kalkulator')} className={`nav-tab ${activeTab === 'kalkulator' ? 'active' : ''}`}>
-                    <Calculator size={14} /> Kalkulator
-                </button>
-                <button onClick={() => setActiveTab('scanner')} className={`nav-tab ${activeTab === 'scanner' ? 'active' : ''}`}>
-                    <Camera size={14} /> Scan Tiket
-                </button>
-            </div>
-
             {/* Content */}
-            {activeTab === 'kalkulator' ? (
-                <FormSection key={JSON.stringify(scannedData)} initialData={scannedData} onSubmit={handleFormSubmit} />
-            ) : (
-                <QRScanner onScanSuccess={handleScanSuccess} />
-            )}
+            <FormSection onSubmit={handleFormSubmit} />
 
             {/* Results */}
-            {result && activeTab === 'kalkulator' && (
+            {result && (
                 <ResultCard
                     result={result}
                     onShowReceipt={() => setShowReceipt(true)}

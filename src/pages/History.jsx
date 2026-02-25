@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
 import { Doughnut, Bar } from 'react-chartjs-2';
-import { Trash2, Download, BarChart2, TrendingUp, Clock, Car, Banknote } from 'lucide-react';
+import { Trash2, Download, BarChart2, TrendingUp, Clock, Car, Banknote, X } from 'lucide-react';
 import { formatIDR, getVehicleLabel, formatDateTime } from '../lib/parkingLogic';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
@@ -51,6 +51,7 @@ function StatCard({ icon: Icon, label, value, sub, color = 'indigo' }) {
 export default function History() {
     const [history, setHistory] = useState([]);
     const [filter, setFilter] = useState('all');
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
 
     useEffect(() => {
         setHistory(JSON.parse(localStorage.getItem('parkingHistory') || '[]'));
@@ -94,8 +95,8 @@ export default function History() {
     }), [stats]);
 
     const exportCSV = () => {
-        const rows = [['ID', 'Timestamp', 'Kendaraan', 'Masuk', 'Keluar', 'Durasi(min)', 'Total']];
-        history.forEach(tx => rows.push([tx.id, tx.timestamp, tx.vehicle, tx.entry, tx.exit, tx.duration, tx.total]));
+        const rows = [['ID', 'Timestamp', 'Kendaraan', 'Plat Nomor', 'Tipe Tiket', 'Masuk', 'Keluar', 'Durasi(min)', 'Total']];
+        history.forEach(tx => rows.push([tx.id, tx.timestamp, tx.vehicle, tx.plate || '-', tx.isLostTicket ? 'Lost Tiket' : 'Casual', tx.entry, tx.exit, tx.duration, tx.total]));
         const csv = rows.map(r => r.join(',')).join('\n');
         const a = document.createElement('a');
         a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
@@ -104,10 +105,15 @@ export default function History() {
     };
 
     const handleClear = () => {
-        if (window.confirm('Hapus semua riwayat? Tindakan ini tidak dapat dibatalkan.')) {
-            localStorage.setItem('parkingHistory', '[]');
-            setHistory([]);
-        }
+        localStorage.setItem('parkingHistory', '[]');
+        setHistory([]);
+        setShowClearConfirm(false);
+    };
+
+    const handleDeleteTx = (id) => {
+        const newHistory = history.filter(tx => tx.id !== id);
+        localStorage.setItem('parkingHistory', JSON.stringify(newHistory));
+        setHistory(newHistory);
     };
 
     const filteredHistory = useMemo(() => {
@@ -162,17 +168,28 @@ export default function History() {
             {/* ─── History List ─── */}
             <div className="glass p-5 shadow-sm mb-6">
                 <div className="flex justify-between items-center mb-5">
-                    <h2 className="font-bold text-base text-slate-800 flex items-center gap-2" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+                    <h2 className="font-bold text-base text-slate-800 dark:text-slate-100 flex items-center gap-2" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
                         Riwayat Transaksi
-                        <span className="chip chip-indigo ml-1 text-[10px]">{history.length}</span>
+                        <span className="chip chip-indigo ml-1 text-[10px] bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-500/30">{history.length}</span>
                     </h2>
                     <div className="flex gap-2">
-                        <button onClick={exportCSV} className="btn-icon bg-sky-50 text-sky-600 border-sky-100 hover:bg-sky-100 text-[10px] font-bold tracking-wider" style={{ width: 'auto', padding: '0 12px' }}>
+                        <button onClick={exportCSV} className="btn-icon bg-sky-50 text-sky-600 border-sky-100 hover:bg-sky-100 dark:bg-sky-500/10 dark:text-sky-400 dark:border-sky-500/20 dark:hover:bg-sky-500/20 text-[10px] font-bold tracking-wider" style={{ width: 'auto', padding: '0 12px' }}>
                             <Download size={14} className="mr-1.5" /> CSV
                         </button>
-                        <button onClick={handleClear} className="btn-icon bg-rose-50 text-rose-500 border-rose-100 hover:bg-rose-100 text-xs">
-                            <Trash2 size={16} />
-                        </button>
+                        {showClearConfirm ? (
+                            <div className="flex bg-rose-50 border border-rose-100 dark:bg-rose-500/10 dark:border-rose-500/20 rounded-xl overflow-hidden">
+                                <button onClick={handleClear} className="px-3 text-[10px] font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 uppercase tracking-wider transition-colors border-r border-rose-100 dark:border-rose-500/20">
+                                    Ya, Hapus
+                                </button>
+                                <button onClick={() => setShowClearConfirm(false)} className="px-2 text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors">
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        ) : (
+                            <button onClick={() => setShowClearConfirm(true)} className="btn-icon bg-rose-50 text-rose-500 border-rose-100 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20 dark:hover:bg-rose-500/20 text-xs">
+                                <Trash2 size={16} />
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -202,12 +219,21 @@ export default function History() {
                             <div className="pl-1">
                                 <div className="flex justify-between items-start mb-3">
                                     <div>
-                                        <p className="font-mono text-[9px] text-slate-400 tracking-widest">{tx.id}</p>
+                                        <div className="flex items-center gap-2">
+                                            <p className="font-mono text-[9px] text-slate-400 tracking-widest">{tx.id}</p>
+                                            {tx.plate && <span className="text-[9px] font-mono font-black text-indigo-500 bg-indigo-50 px-1 rounded border border-indigo-100 dark:bg-indigo-500/20 dark:border-indigo-500/30 dark:text-indigo-400">{tx.plate}</span>}
+                                            {tx.isLostTicket && <span className="text-[9px] font-bold text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100 dark:bg-rose-500/20 dark:border-rose-500/30 dark:text-rose-400 uppercase tracking-wider">Lost Tiket</span>}
+                                        </div>
                                         <p className="text-[11px] font-bold text-slate-800 mt-1">{new Date(tx.timestamp).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</p>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="font-mono font-black text-lg text-indigo-600 tracking-tight">{formatIDR(tx.total)}</p>
-                                        <span className="chip bg-slate-50 text-slate-600 border-slate-200 text-[9px] mt-1 shadow-none inline-flex">{getVehicleLabel(tx.vehicle)}</span>
+                                    <div className="text-right flex flex-col justify-between items-end">
+                                        <button onClick={() => handleDeleteTx(tx.id)} title="Hapus transaksi ini" className="text-slate-300 hover:text-rose-500 dark:text-slate-600 dark:hover:text-rose-400 transition-colors p-1 mb-1">
+                                            <Trash2 size={14} />
+                                        </button>
+                                        <div>
+                                            <p className="font-mono font-black text-lg text-indigo-600 dark:text-indigo-400 tracking-tight">{formatIDR(tx.total)}</p>
+                                            <span className="chip bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800/50 dark:text-slate-300 dark:border-slate-700/50 text-[9px] mt-1 shadow-none inline-flex">{getVehicleLabel(tx.vehicle)}</span>
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">

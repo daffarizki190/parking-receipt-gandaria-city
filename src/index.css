@@ -8,11 +8,15 @@
     }
 
     body {
-        @apply bg-secondary text-textMain antialiased;
+        @apply bg-slate-50 text-slate-800 antialiased transition-colors duration-500;
         font-family: 'Inter', sans-serif;
         selection-background-color: #4f46e5;
         selection-color: white;
         -webkit-tap-highlight-color: transparent;
+    }
+
+    body.dark {
+        @apply bg-slate-950 text-slate-200;
     }
 }
 
@@ -24,6 +28,13 @@
     border: 1px solid rgba(255, 255, 255, 0.5);
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.02);
     border-radius: 1.5rem;
+    transition: background-color 0.5s, border-color 0.5s;
+}
+
+.dark .glass {
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .glass-sm {
@@ -32,14 +43,26 @@
     border: 1px solid rgba(255, 255, 255, 0.6);
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
     border-radius: 1rem;
+    transition: background-color 0.5s, border-color 0.5s;
+}
+
+.dark .glass-sm {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .chip {
     @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all;
     background: white;
-    border: 1px solid var(--tw-color-borderSubtle);
-    color: var(--tw-color-textMuted);
+    border: 1px solid #e2e8f0;
+    color: #64748b;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+}
+
+.dark .chip {
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
 }
 
 .chip-indigo {
@@ -51,8 +74,16 @@
     @apply bg-emerald-50 text-emerald-700 border-emerald-200;
 }
 
+.dark .chip-green {
+    @apply bg-emerald-900/40 text-emerald-400 border-emerald-800/50;
+}
+
 .chip-amber {
     @apply bg-amber-50 text-amber-700 border-amber-200;
+}
+
+.dark .chip-amber {
+    @apply bg-amber-900/40 text-amber-400 border-amber-800/50;
 }
 
 /* ── Buttons ── */
@@ -87,11 +118,23 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
+.dark .btn-secondary {
+    background: #1e293b;
+    color: #f1f5f9;
+    border-color: #334155;
+}
+
 .btn-secondary:hover {
     background: #f8fafc;
     color: #0f172a;
     border-color: #cbd5e1;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.dark .btn-secondary:hover {
+    background: #334155;
+    color: #ffffff;
+    border-color: #475569;
 }
 
 .btn-icon {
@@ -110,6 +153,17 @@
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
 }
 
+.dark .btn-icon {
+    background: #1e293b;
+    color: #94a3b8;
+    border-color: #334155;
+}
+
+.dark .btn-icon:hover {
+    background: #334155;
+    color: #f8fafc;
+}
+
 /* ── Form Elements ── */
 .form-group {
     @apply flex flex-col gap-1.5 relative;
@@ -124,6 +178,11 @@
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.01);
 }
 
+.dark .form-input {
+    @apply bg-slate-800 text-slate-200 border-slate-700;
+    color-scheme: dark;
+}
+
 .form-input:focus {
     @apply outline-none border-indigo-400 bg-white;
     box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1), inset 0 2px 4px rgba(0, 0, 0, 0.01);
@@ -131,6 +190,10 @@
 
 .form-input::placeholder {
     @apply text-slate-400 font-normal;
+}
+
+.dark .form-input::placeholder {
+    @apply text-slate-500;
 }
 
 /* Fix webkit datetime picker in light mode */
@@ -166,6 +229,22 @@
     transform: translateY(-2px) scale(1.02);
 }
 
+.dark .vehicle-card {
+    @apply bg-slate-800/80 border-slate-700 text-slate-300;
+}
+
+.dark .vehicle-card:hover {
+    @apply border-slate-500;
+}
+
+.dark .vehicle-card.active {
+    @apply border-indigo-500 bg-indigo-900/30;
+}
+
+.dark .vehicle-name {
+    @apply text-slate-200;
+}
+
 .vehicle-emoji {
     @apply text-3xl mb-2 drop-shadow-sm;
 }
@@ -182,10 +261,22 @@
     @apply bg-white text-indigo-600 font-bold;
 }
 
+.dark .vehicle-rate {
+    @apply bg-slate-700/50 text-slate-400;
+}
+
+.dark .vehicle-card.active .vehicle-rate {
+    @apply bg-indigo-500/20 text-indigo-300;
+}
+
 /* ── Typography & Display ── */
 .clock-display {
     @apply text-3xl font-black tracking-tight text-slate-800;
     font-family: 'Space Grotesk', sans-serif;
+}
+
+.dark .clock-display {
+    @apply text-slate-100;
 }
 
 .total-amount {
@@ -197,9 +288,13 @@
 
 /* ── Receipt Styles ── */
 .receipt-card {
-    @apply bg-white rounded-2xl relative overflow-hidden;
+    @apply bg-white rounded-2xl relative overflow-hidden transition-colors;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.03);
     border: 1px solid #f1f5f9;
+}
+
+.dark .receipt-card {
+    @apply bg-slate-900 border-slate-800;
 }
 
 .receipt-card::before {
@@ -214,6 +309,10 @@
 
 .receipt-divider {
     @apply border-t border-dashed border-slate-200 my-4;
+}
+
+.dark .receipt-divider {
+    @apply border-slate-700;
 }
 
 .receipt-dots {
@@ -235,6 +334,16 @@
 
 .nav-tab.active {
     @apply bg-white text-indigo-600 shadow-sm border border-slate-100;
+}
+
+.dark .nav-tab {
+    @apply text-slate-400;
+}
+.dark .nav-tab:hover {
+    @apply text-slate-200 bg-slate-800/50;
+}
+.dark .nav-tab.active {
+    @apply bg-slate-800 text-indigo-400 border-slate-700;
 }
 
 /* ── Animations Reference ── */
@@ -305,12 +414,17 @@
 
 /* ── Bottom Nav ── */
 .bottom-nav {
-    @apply bg-white/90 backdrop-blur-xl border-t border-slate-100 pb-safe;
+    @apply bg-white/90 backdrop-blur-xl border-t border-slate-100 pb-safe transition-colors;
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.03);
     display: flex;
     justify-content: space-around;
     align-items: center;
     height: 70px;
+}
+
+.dark .bottom-nav {
+    @apply bg-slate-950/90 border-slate-800;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.2);
 }
 
 .bottom-nav-btn {
@@ -327,7 +441,11 @@
 
 /* ── Background Scenery (Elegant) ── */
 .bg-scene {
-    @apply fixed inset-0 -z-10 overflow-hidden bg-slate-50;
+    @apply fixed inset-0 -z-10 overflow-hidden bg-slate-50 transition-colors duration-500;
+}
+
+.dark .bg-scene {
+    @apply bg-slate-950;
 }
 
 .blob {
@@ -365,11 +483,18 @@
 }
 
 .grid-overlay {
-    @apply fixed inset-0 -z-10 opacity-30 pointer-events-none;
+    @apply fixed inset-0 -z-10 opacity-30 pointer-events-none transition-opacity duration-500;
     background-size: 30px 30px;
     background-image:
         linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
         linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+}
+
+.dark .grid-overlay {
+    opacity: 0.1;
+    background-image:
+        linear-gradient(to right, rgba(255, 255, 255, 1) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 1) 1px, transparent 1px);
 }
 
 @supports (padding-bottom: env(safe-area-inset-bottom)) {

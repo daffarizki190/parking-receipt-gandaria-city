@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Mic, Camera, Calculator, ChevronRight } from 'lucide-react';
+import { Mic, Camera, Calculator, ChevronRight, FileText } from 'lucide-react';
 import { TARIFF, formatIDR } from '../lib/parkingLogic';
 import VoiceCommand from './VoiceCommand';
 import CameraModal from './CameraModal';
@@ -8,8 +8,8 @@ const VEHICLES = [
     { key: 'motor', emoji: '🏍️', name: 'Motor', rate: `${formatIDR(TARIFF.motor.firstRate)}/jam` },
     { key: 'mobil', emoji: '🚗', name: 'Mobil', rate: `${formatIDR(TARIFF.mobil.firstRate)}/jam` },
     { key: 'box', emoji: '🚛', name: 'Box/Truk', rate: `${formatIDR(TARIFF.box.firstRate)}/jam` },
-    { key: 'valet_weekday', emoji: '🎖️', name: 'Valet WD', rate: `${formatIDR(75000)}+/trip` },
-    { key: 'valet_weekend', emoji: '🎖️', name: 'Valet WE', rate: `${formatIDR(100000)}+/trip` },
+    { key: 'valet_weekday', emoji: '🚗', name: 'Valet WD', rate: `${formatIDR(75000)}+/trip` },
+    { key: 'valet_weekend', emoji: '🚗', name: 'Valet WE', rate: `${formatIDR(100000)}+/trip` },
 ];
 
 const toDatetimeLocal = (date) => {
@@ -20,22 +20,27 @@ const toDatetimeLocal = (date) => {
 
 export default function FormSection({ initialData, onSubmit }) {
     const [vehicle, setVehicle] = useState(initialData?.vehicle || '');
+    const [plate, setPlate] = useState(initialData?.plate || '');
     const [entryTime, setEntryTime] = useState(initialData?.entry ? toDatetimeLocal(new Date(initialData.entry)) : '');
     const [exitTime, setExitTime] = useState('');
+    const [isLostTicket, setIsLostTicket] = useState(initialData?.isLostTicket || false);
     const [showVoice, setShowVoice] = useState(false);
     const [showCamera, setShowCamera] = useState(false);
-    const [loading, setLoading] = useState(false);
 
-    // Auto-fill "now" as exit
+    // Auto-fill "now" as entry and exit times by default
     useEffect(() => {
-        setExitTime(toDatetimeLocal(new Date()));
-    }, []);
+        const now = toDatetimeLocal(new Date());
+        if (!initialData?.entry) setEntryTime(now);
+        setExitTime(now);
+    }, [initialData]);
 
     // Apply scanned data
     useEffect(() => {
         if (initialData) {
             if (initialData.vehicle) setVehicle(initialData.vehicle);
+            if (initialData.plate) setPlate(initialData.plate);
             if (initialData.entry) setEntryTime(toDatetimeLocal(new Date(initialData.entry)));
+            if (initialData.isLostTicket !== undefined) setIsLostTicket(initialData.isLostTicket);
         }
     }, [initialData]);
 
@@ -52,11 +57,7 @@ export default function FormSection({ initialData, onSubmit }) {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!vehicle || !entryTime || !exitTime) return;
-        setLoading(true);
-        setTimeout(() => {
-            onSubmit({ vehicle, entry: new Date(entryTime), exit: new Date(exitTime) });
-            setLoading(false);
-        }, 600);
+        onSubmit({ vehicle, plate, entry: new Date(entryTime), exit: new Date(exitTime), isLostTicket });
     };
 
     return (
@@ -115,6 +116,53 @@ export default function FormSection({ initialData, onSubmit }) {
                         )}
                     </div>
 
+                    {/* Jenis Transaksi */}
+                    <div>
+                        <div className="form-label flex items-center gap-1.5 mb-2">
+                            <FileText size={12} className="text-indigo-400" /> Jenis Transaksi
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <label className={`relative flex items-center justify-center gap-2 p-3 sm:py-3.5 rounded-xl border cursor-pointer transition-all ${!isLostTicket ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-500/10' : 'border-slate-200 bg-slate-50 opacity-60 hover:bg-slate-100 dark:bg-slate-800/50 dark:border-slate-700/50'}`}>
+                                <input type="radio" name="ticket_type" className="hidden" checked={!isLostTicket} onChange={() => setIsLostTicket(false)} />
+                                <span className="text-sm font-bold text-slate-800">Casual</span>
+                            </label>
+                            <label className={`relative flex items-center justify-center gap-2 p-3 sm:py-3.5 rounded-xl border cursor-pointer transition-all ${isLostTicket ? 'border-rose-500 bg-rose-50/50 dark:bg-rose-500/10' : 'border-slate-200 bg-slate-50 opacity-60 hover:bg-slate-100 dark:bg-slate-800/50 dark:border-slate-700/50'}`}>
+                                <input type="radio" name="ticket_type" className="hidden" checked={isLostTicket} onChange={() => setIsLostTicket(true)} />
+                                <span className="text-sm font-bold text-slate-800 flex items-center gap-1.5">Lost Tiket <span className="text-[9px] bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 px-1.5 py-0.5 rounded font-black uppercase tracking-wider">+Denda</span></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* License Plate Input */}
+                    <div className="form-group relative">
+                        <label className="form-label mb-1">
+                            Plat Nomor <span className="opacity-60">(Opsional)</span>
+                        </label>
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder="B 1234 GCT"
+                                value={plate}
+                                onChange={e => setPlate(e.target.value.toUpperCase())}
+                                className="form-input pr-12 font-mono uppercase tracking-widest text-lg sm:text-base py-3 sm:py-2.5"
+                                style={{
+                                    backgroundImage: plate ? "url(\"data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2310b981' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E\")" : "none",
+                                    backgroundRepeat: 'no-repeat',
+                                    backgroundPosition: 'calc(100% - 45px) center',
+                                    backgroundSize: '16px'
+                                }}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setPlate('B 1234 GCT')}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-indigo-500 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-all active:scale-95 border border-indigo-100/50 dark:bg-indigo-500/20 dark:border-indigo-500/30 dark:text-indigo-400"
+                                title="Isi Otomatis (Demo AI OCR)"
+                            >
+                                <Camera size={16} />
+                            </button>
+                        </div>
+                    </div>
+
                     {/* Time Inputs */}
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="form-group">
@@ -142,21 +190,12 @@ export default function FormSection({ initialData, onSubmit }) {
                     {/* Submit */}
                     <button
                         type="submit"
-                        disabled={loading || !vehicle}
+                        disabled={!vehicle}
                         className="btn-primary w-full flex items-center justify-center gap-2 text-sm uppercase tracking-wide py-4 mt-2"
                         style={{ opacity: (!vehicle ? 0.6 : 1) }}
                     >
-                        {loading ? (
-                            <>
-                                <div className="w-4 h-4 border-2 border-white/80 border-t-white rounded-full animate-spin" />
-                                Menghitung Tagihan...
-                            </>
-                        ) : (
-                            <>
-                                Kalkulasi Tagihan
-                                <ChevronRight size={16} />
-                            </>
-                        )}
+                        Kalkulasi Tagihan
+                        <ChevronRight size={16} />
                     </button>
                 </form>
             </div>

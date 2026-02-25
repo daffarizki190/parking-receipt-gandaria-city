@@ -16,3 +16,4 @@ apk-cordova/node_modules/
 # Build artifacts
 dist/
 build/
+node_modules

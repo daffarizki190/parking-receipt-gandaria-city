@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { formatIDR, formatDateTime, getVehicleLabel } from '../lib/parkingLogic';
 import { Share2, Image, X } from 'lucide-react';
-import QRCode from 'qrcode';
 
 /* ── Confetti ─────────────────────────────────────────────────── */
 function launchConfetti() {
@@ -30,8 +29,13 @@ function useCountUp(target, duration = 1200) {
             const elapsed = Date.now() - start;
             const progress = Math.min(elapsed / duration, 1);
             const ease = 1 - Math.pow(1 - progress, 3);
-            setValue(Math.round(target * ease));
-            if (progress < 1) requestAnimationFrame(frame);
+
+            if (progress < 1) {
+                setValue(Math.round(target * ease));
+                requestAnimationFrame(frame);
+            } else {
+                setValue(target);
+            }
         };
         requestAnimationFrame(frame);
     }, [target, duration]);
@@ -52,29 +56,25 @@ const makeId = () => {
 };
 
 export default function ReceiptSection({ data, onClose }) {
-    const { breakdown, entry, exit, vehicle } = data;
+    const { breakdown, entry, exit, vehicle, plate, isLostTicket } = data;
     const receiptId = useRef(makeId()).current;
-    const qrRef = useRef(null);
     const printRef = useRef(null);
     const printedAt = new Date();
 
     useEffect(() => {
         launchConfetti();
-        if (qrRef.current) {
-            const payload = JSON.stringify({ v: vehicle, e: entry.toISOString(), x: exit.toISOString(), t: breakdown.totalCharge });
-            QRCode.toCanvas(qrRef.current, payload, {
-                width: 140, margin: 1,
-                color: { dark: '#0f172a', light: '#ffffff' },
-            });
-        }
-    }, [vehicle, entry, exit, breakdown.totalCharge]);
+    }, []);
 
     const shareWA = () => {
+        const _plate = plate ? `Plat No  : ${plate}\n` : '';
+        const _status = isLostTicket ? `Status   : Hilang Tiket (Denda)\n` : '';
         const msg =
             `*PARKMATE GANDARIA CITY*\n` +
             `========================\n` +
-            `No. Resi : ${receiptId}\n` +
+            `ID Trans : ${receiptId}\n` +
             `Kendaraan: ${getVehicleLabel(vehicle)}\n` +
+            _plate +
+            _status +
             `Masuk    : ${formatDateTime(entry)}\n` +
             `Keluar   : ${formatDateTime(exit)}\n` +
             `Durasi   : ${breakdown.durDays}h ${breakdown.durHoursRem}j ${breakdown.durMins}m\n` +
@@ -100,7 +100,7 @@ export default function ReceiptSection({ data, onClose }) {
                 {/* Header Text */}
                 <div className="text-center mb-6">
                     <p className="text-[10px] font-black tracking-[0.3em] text-indigo-600 mb-1">PARKMATE</p>
-                    <p className="text-[9px] font-medium tracking-widest text-slate-400 uppercase">GANDARIA CITY RESIDENCE</p>
+                    <p className="text-[9px] font-medium tracking-widest text-slate-400 uppercase">GANDARIA CITY</p>
                     <div className="receipt-dots justify-center mt-4">
                         {Array.from({ length: 12 }).map((_, i) => <span key={i} />)}
                     </div>
@@ -109,27 +109,29 @@ export default function ReceiptSection({ data, onClose }) {
                 {/* ID & Time */}
                 <div className="flex justify-between items-baseline mb-5 text-[10px]">
                     <div>
-                        <p className="text-slate-400 font-bold uppercase tracking-widest mb-0.5">No. Resi</p>
-                        <p className="font-mono font-bold text-slate-800">{receiptId}</p>
+                        <p className="text-slate-400 font-bold uppercase tracking-widest mb-0.5">ID Trans. (E-Money)</p>
+                        <p className="font-mono font-bold text-slate-800 dark:text-slate-100">{receiptId}</p>
                     </div>
                     <div className="text-right">
                         <p className="text-slate-400 font-bold uppercase tracking-widest mb-0.5">Cetak</p>
-                        <p className="font-mono text-slate-500">{formatDateTime(printedAt)}</p>
+                        <p className="font-mono text-slate-500 dark:text-slate-400">{formatDateTime(printedAt)}</p>
                     </div>
                 </div>
 
                 {/* Vehicle & Core Dates */}
-                <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 mb-5">
+                <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700 mb-5">
                     <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2.5 text-xs">
                         {[
                             { label: 'Tipe', value: getVehicleLabel(vehicle) },
+                            ...(isLostTicket ? [{ label: 'Status', value: 'LOST TIKET', special: true, alert: true }] : []),
+                            ...(plate ? [{ label: 'Plat', value: plate, mono: true, special: true }] : []),
                             { label: 'Masuk', value: formatDateTime(entry), mono: true },
                             { label: 'Keluar', value: formatDateTime(exit), mono: true },
                             { label: 'Dur', value: `${breakdown.durDays}h ${breakdown.durHoursRem}j ${breakdown.durMins}m` },
-                        ].map(({ label, value, mono }) => (
+                        ].map(({ label, value, mono, special, alert }) => (
                             <div key={label} className="contents">
                                 <span className="text-slate-400 font-semibold tracking-wider uppercase text-[10px] self-center">{label}</span>
-                                <span className={`text-slate-800 font-medium ${mono ? 'font-mono text-[11px]' : ''} text-right`}>{value}</span>
+                                <span className={alert ? 'font-mono font-black text-rose-500 tracking-widest text-right text-[11px] bg-rose-50 dark:bg-rose-500/20 px-1 py-0.5 rounded' : special ? 'font-mono font-black text-indigo-600 dark:text-indigo-400 tracking-widest text-right text-sm' : `text-slate-800 dark:text-slate-200 font-medium ${mono ? 'font-mono text-[11px]' : ''} text-right`}>{value}</span>
                             </div>
                         ))}
                     </div>
@@ -142,27 +144,17 @@ export default function ReceiptSection({ data, onClose }) {
                     </div>
                     {breakdown.hourlyRows.map((r, i) => (
                         <div key={i} className="grid grid-cols-[1fr_auto_auto] gap-x-3 py-1.5 items-center px-1">
-                            <span className="text-slate-700 text-xs font-semibold">{r.label}</span>
+                            <span className="text-slate-700 dark:text-slate-300 text-xs font-semibold">{r.label}</span>
                             <span className="text-slate-400 font-mono text-[10px]">{r.unit}</span>
-                            <span className="font-mono font-bold text-slate-700 text-sm text-right">{formatIDR(r.subtotal)}</span>
+                            <span className="font-mono font-bold text-slate-700 dark:text-slate-200 text-sm text-right">{formatIDR(r.subtotal)}</span>
                         </div>
                     ))}
                 </div>
 
-                <div className="border-t-2 border-dashed border-slate-200 pt-5 text-center mt-2 relative">
-                    <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase mb-1">Total Tagihan</p>
+                <div className="border-t-2 border-dashed border-slate-200 dark:border-slate-700 pt-5 text-center mt-2 relative">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold tracking-widest uppercase mb-1">Total Tagihan</p>
                     <AnimatedTotal total={breakdown.totalCharge} />
                     <p className="text-[10px] text-slate-400 font-medium tracking-wide mt-2">Dibulatkan Ke Atas ({breakdown.methodLabel})</p>
-                </div>
-
-                {/* Footer QR */}
-                <div className="flex flex-col items-center mt-8">
-                    <div className="p-2 border border-slate-100 rounded-xl bg-white shadow-sm inline-block">
-                        <canvas ref={qrRef} />
-                    </div>
-                    <p className="text-[9px] text-slate-400 mt-3 font-mono tracking-widest uppercase text-center max-w-[200px] leading-relaxed">
-                        Scan for Digital Verification
-                    </p>
                 </div>
             </div>
 
@@ -171,11 +163,11 @@ export default function ReceiptSection({ data, onClose }) {
                 <button onClick={onClose} className="btn-secondary flex flex-col items-center gap-1.5 py-3 px-2 text-[11px] uppercase tracking-wider font-bold">
                     <X size={15} /> Tutup
                 </button>
-                <button onClick={shareWA} className="btn-icon bg-emerald-50 border-emerald-100 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700 flex flex-col items-center gap-1.5 py-3 px-2 text-[11px] uppercase tracking-wider font-bold w-full justify-center shadow-none"
+                <button onClick={shareWA} className="btn-icon bg-emerald-50 border-emerald-100 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400 flex flex-col items-center gap-1.5 py-3 px-2 text-[11px] uppercase tracking-wider font-bold w-full justify-center shadow-none"
                     style={{ borderRadius: '14px' }}>
                     <Share2 size={15} /> Kirim
                 </button>
-                <button onClick={saveImage} className="btn-icon bg-sky-50 border-sky-100 text-sky-600 hover:bg-sky-100 hover:text-sky-700 flex flex-col items-center gap-1.5 py-3 px-2 text-[11px] uppercase tracking-wider font-bold w-full justify-center shadow-none"
+                <button onClick={saveImage} className="btn-icon bg-sky-50 border-sky-100 text-sky-600 hover:bg-sky-100 hover:text-sky-700 dark:bg-sky-500/10 dark:border-sky-500/20 dark:text-sky-400 flex flex-col items-center gap-1.5 py-3 px-2 text-[11px] uppercase tracking-wider font-bold w-full justify-center shadow-none"
                     style={{ borderRadius: '14px' }}>
                     <Image size={15} /> Simpan
                 </button>
