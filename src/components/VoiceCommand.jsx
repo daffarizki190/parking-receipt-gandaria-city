@@ -1,96 +1,118 @@
-import { useState, useEffect } from 'react';
-import { Mic, MicOff } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Mic, MicOff, X } from 'lucide-react';
 
-const VehicleKeywords = {
-    "mobil": "mobil", "motor": "motor", "sepeda motor": "motor",
-    "box": "box", "truk": "box", "valet": "valet_weekday",
-    "valet weekday": "valet_weekday", "valet weekend": "valet_weekend",
-};
-
-export default function VoiceCommand({ onCommand }) {
-    const [isListening, setIsListening] = useState(false);
-    const [recognition, setRecognition] = useState(null);
-    const [status, setStatus] = useState('');
+export default function VoiceCommand({ onFill, onClose }) {
+    const [listening, setListening] = useState(true);
+    const [transcript, setTranscript] = useState('');
+    const [status, setStatus] = useState('Mendengarkan...');
+    const recognitionRef = useRef(null);
 
     useEffect(() => {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (SpeechRecognition) {
-            const rec = new SpeechRecognition();
-            rec.lang = 'id-ID';
-            rec.interimResults = false;
-            rec.maxAlternatives = 1;
-
-            rec.onstart = () => {
-                setIsListening(true);
-                setStatus('Mendengarkan... (Coba: "Mobil masuk jam 10 pagi")');
-            };
-            rec.onerror = (e) => {
-                setStatus(`Error: ${e.error}`);
-                setIsListening(false);
-            };
-            rec.onend = () => {
-                setIsListening(false);
-                setTimeout(() => setStatus(''), 3000);
-            };
-            rec.onresult = (e) => {
-                const transcript = e.results[0][0].transcript.toLowerCase();
-                processTranscript(transcript);
-            };
-            setRecognition(rec);
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            setStatus('Browser tidak mendukung Voice API.');
+            setListening(false);
+            return;
         }
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.lang = 'id-ID';
+        recognitionRef.current.continuous = false;
+        recognitionRef.current.interimResults = true;
+
+        recognitionRef.current.onstart = () => {
+            setListening(true);
+            setStatus('Silakan bicara...');
+        };
+
+        recognitionRef.current.onresult = (e) => {
+            const current = e.resultIndex;
+            const text = e.results[current][0].transcript;
+            setTranscript(text);
+        };
+
+        recognitionRef.current.onend = () => {
+            setListening(false);
+            if (transcript) processText(transcript);
+        };
+
+        recognitionRef.current.start();
+
+        return () => {
+            if (recognitionRef.current) recognitionRef.current.stop();
+        };
     }, []);
 
-    const processTranscript = (text) => {
-        let vehicle = null;
-        let time = null;
-        let isExit = text.includes('keluar');
+    const processText = (text) => {
+        setStatus('Memproses AI...');
+        const t = text.toLowerCase();
+        let valV = null, valE = null;
 
-        for (const [kw, val] of Object.entries(VehicleKeywords)) {
-            if (text.includes(kw)) { vehicle = val; break; }
+        if (t.includes('motor')) valV = 'motor';
+        else if (t.includes('truk') || t.includes('box')) valV = 'box';
+        else if (t.includes('mobil')) valV = 'mobil';
+
+        const matchJam = t.match(/jam\s*(\d{1,2})/);
+        if (matchJam) {
+            const h = parseInt(matchJam[1], 10);
+            const isSiangMalam = t.includes('malam') || t.includes('sore');
+            let fh = h;
+            if (isSiangMalam && h < 12) fh += 12;
+            else if (t.includes('pagi') && h === 12) fh = 0;
+
+            const d = new Date();
+            d.setHours(fh, 0, 0, 0);
+
+            // Format datetime-local
+            const pad = (n) => String(n).padStart(2, '0');
+            valE = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${d.getDate()}T${pad(d.getHours())}:00`;
         }
 
-        const match = text.match(/(?:jam|pukul)\s+(\d{1,2})(?::(\d{2}))?\s*(pagi|siang|sore|malam)?/i);
-        if (match) {
-            let hours = parseInt(match[1], 10);
-            const mins = match[2] ? parseInt(match[2], 10) : 0;
-            const period = (match[3] || '').toLowerCase();
-
-            if (period === 'sore' || period === 'malam') hours = hours < 12 ? hours + 12 : hours;
-            if (period === 'pagi' && hours === 12) hours = 0;
-            if (period === 'siang' && hours < 12) hours += 12;
-
-            const dt = new Date();
-            dt.setHours(hours, mins, 0, 0);
-            time = dt;
-        }
-
-        onCommand({ vehicle, time, isExit, raw: text });
-        setStatus(`✓ Terdeteksi: "${text}"`);
+        setTimeout(() => {
+            if (valV || valE) {
+                setStatus('Data berhasil diisi.');
+                onFill({ vehicle: valV, entryTime: valE });
+                setTimeout(onClose, 1500);
+            } else {
+                setStatus('Perintah tidak dimengerti.');
+                setTranscript('');
+                setListening(false);
+            }
+        }, 800);
     };
 
     const toggleListen = () => {
-        if (!recognition) return alert('Browser tidak mendukung Web Speech API (Gunakan Chrome).');
-        if (isListening) recognition.stop();
-        else recognition.start();
+        if (listening) {
+            recognitionRef.current?.stop();
+        } else {
+            setTranscript('');
+            recognitionRef.current?.start();
+        }
     };
 
     return (
-        <div className="flex flex-col items-end">
-            <button
-                type="button"
-                onClick={toggleListen}
-                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all border ${isListening
-                        ? 'bg-red-500/20 text-red-500 border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.4)] animate-pulse'
-                        : 'bg-white/5 text-accent border-white/10 hover:bg-accent/10 hover:border-accent/40'
-                    }`}
-                title="Perintah Suara (AI)"
-            >
-                {isListening ? <MicOff size={18} /> : <Mic size={18} />}
-            </button>
+        <div className="flex flex-col gap-3">
+            <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={toggleListen}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-inner-soft ${listening ? 'bg-indigo-100 text-indigo-600 animate-pulse-soft' : 'bg-slate-200 text-slate-500'}`}
+                    >
+                        {listening ? <Mic size={18} /> : <MicOff size={18} />}
+                    </button>
+                    <div>
+                        <p className="text-[10px] font-bold tracking-widest uppercase text-slate-400 mb-0.5">Asisten AI</p>
+                        <p className="text-sm font-semibold text-slate-800">{status}</p>
+                    </div>
+                </div>
+                <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">
+                    <X size={16} />
+                </button>
+            </div>
 
-            {status && (
-                <div className="absolute top-16 right-0 bg-black/80 backdrop-blur-sm border border-white/10 text-white text-xs px-3 py-2 rounded-lg z-10 whitespace-nowrap shadow-xl">
-                    {status}
+            {transcript && (
+                <div className="bg-white p-3 border border-slate-100 rounded-xl shadow-sm mt-1">
+                    <p className="text-indigo-600 font-medium italic text-sm">{transcript}</p>
                 </div>
             )}
         </div>

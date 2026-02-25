@@ -1,135 +1,173 @@
 import { useState, useEffect } from 'react';
-import { Calculator } from 'lucide-react';
-import CameraModal from './CameraModal';
+import { Mic, Camera, Calculator, ChevronRight } from 'lucide-react';
+import { TARIFF, formatIDR } from '../lib/parkingLogic';
 import VoiceCommand from './VoiceCommand';
-import AIPrediction from './AIPrediction';
+import CameraModal from './CameraModal';
 
-const toLocalISO = (date) => {
+const VEHICLES = [
+    { key: 'motor', emoji: '🏍️', name: 'Motor', rate: `${formatIDR(TARIFF.motor.firstRate)}/jam` },
+    { key: 'mobil', emoji: '🚗', name: 'Mobil', rate: `${formatIDR(TARIFF.mobil.firstRate)}/jam` },
+    { key: 'box', emoji: '🚛', name: 'Box/Truk', rate: `${formatIDR(TARIFF.box.firstRate)}/jam` },
+    { key: 'valet_weekday', emoji: '🎖️', name: 'Valet WD', rate: `${formatIDR(75000)}+/trip` },
+    { key: 'valet_weekend', emoji: '🎖️', name: 'Valet WE', rate: `${formatIDR(100000)}+/trip` },
+];
+
+const toDatetimeLocal = (date) => {
     if (!date) return '';
-    const tzOffset = date.getTimezoneOffset() * 60000;
-    return new Date(date - tzOffset).toISOString().slice(0, 16);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
 export default function FormSection({ initialData, onSubmit }) {
-    const [vehicle, setVehicle] = useState('mobil');
-    const [entryTime, setEntryTime] = useState('');
+    const [vehicle, setVehicle] = useState(initialData?.vehicle || '');
+    const [entryTime, setEntryTime] = useState(initialData?.entry ? toDatetimeLocal(new Date(initialData.entry)) : '');
     const [exitTime, setExitTime] = useState('');
-    const [cameraOpen, setCameraOpen] = useState(false);
+    const [showVoice, setShowVoice] = useState(false);
+    const [showCamera, setShowCamera] = useState(false);
+    const [loading, setLoading] = useState(false);
 
+    // Auto-fill "now" as exit
+    useEffect(() => {
+        setExitTime(toDatetimeLocal(new Date()));
+    }, []);
+
+    // Apply scanned data
     useEffect(() => {
         if (initialData) {
-            setVehicle(initialData.v || 'mobil');
-            if (initialData.e) setEntryTime(toLocalISO(new Date(initialData.e)));
-            if (!initialData.x) setExitTime(toLocalISO(new Date()));
+            if (initialData.vehicle) setVehicle(initialData.vehicle);
+            if (initialData.entry) setEntryTime(toDatetimeLocal(new Date(initialData.entry)));
         }
     }, [initialData]);
 
-    const handleSubmit = (e) => {
-        if (e) e.preventDefault();
-        if (!vehicle || !entryTime || !exitTime) return;
-
-        onSubmit({
-            vehicle,
-            entry: new Date(entryTime),
-            exit: new Date(exitTime)
-        });
+    const handleVehicleDetected = (v) => {
+        setVehicle(v);
+        setShowCamera(false);
+    };
+    const handleVoiceFill = ({ vehicle: v, entryTime: e, exitTime: x }) => {
+        if (v) setVehicle(v);
+        if (e) setEntryTime(e);
+        if (x) setExitTime(x);
     };
 
-    const handleVoiceCommand = ({ vehicle: v, time, isExit }) => {
-        if (v) setVehicle(v);
-        if (time) {
-            if (isExit) setExitTime(toLocalISO(time));
-            else setEntryTime(toLocalISO(time));
-        }
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!vehicle || !entryTime || !exitTime) return;
+        setLoading(true);
+        setTimeout(() => {
+            onSubmit({ vehicle, entry: new Date(entryTime), exit: new Date(exitTime) });
+            setLoading(false);
+        }, 600);
     };
 
     return (
         <>
-            <div className="glass-card flex flex-col p-6 rounded-3xl animate-in fade-in zoom-in-95 duration-300">
-                <AIPrediction />
-
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold">Formulir Pengecekan</h2>
+            <div className="glass anim-slide-up p-5 sm:p-7 flex flex-col gap-6">
+                {/* Header Row */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="font-bold text-xl text-slate-800" style={{ fontFamily: 'Space Grotesk, sans-serif', letterSpacing: '-0.5px' }}>
+                            Detail Booking
+                        </h2>
+                        <p className="text-[11px] font-medium text-slate-500 mt-0.5 tracking-wide">Lengkapi data kendaraan untuk kalkulasi</p>
+                    </div>
                     <div className="flex gap-2">
-                        <VoiceCommand onCommand={handleVoiceCommand} />
-                        <button
-                            type="button"
-                            onClick={() => setCameraOpen(true)}
-                            className="w-10 h-10 rounded-xl bg-white/5 text-accent border border-white/10 flex items-center justify-center hover:bg-accent/10 hover:border-accent/40 transition-colors"
-                            title="Deteksi AI Kendaraan"
-                        >
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
+                        <button onClick={() => setShowVoice(v => !v)} className="btn-icon bg-indigo-50 text-indigo-600 border-indigo-100" title="Perintah suara">
+                            <Mic size={16} />
+                        </button>
+                        <button onClick={() => setShowCamera(true)} className="btn-icon bg-sky-50 text-sky-600 border-sky-100" title="Deteksi AI kamera">
+                            <Camera size={16} />
                         </button>
                     </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold text-slate-300">Jenis Kendaraan</label>
-                        <div className="relative">
-                            <select
-                                value={vehicle}
-                                onChange={e => setVehicle(e.target.value)}
+                {/* Voice Panel */}
+                {showVoice && (
+                    <div className="anim-fade-in bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <VoiceCommand onFill={handleVoiceFill} onClose={() => setShowVoice(false)} />
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+                    {/* Vehicle Picker */}
+                    <div>
+                        <div className="form-label flex items-center gap-1.5 mb-2">
+                            <Calculator size={12} className="text-indigo-400" /> Kategori Kendaraan
+                        </div>
+                        <div className="vehicle-grid">
+                            {VEHICLES.map(v => (
+                                <button
+                                    key={v.key}
+                                    type="button"
+                                    onClick={() => setVehicle(v.key)}
+                                    className={`vehicle-card ${vehicle === v.key ? 'active' : ''}`}
+                                >
+                                    <span className="vehicle-emoji">{v.emoji}</span>
+                                    <span className="vehicle-name">{v.name}</span>
+                                    <span className="vehicle-rate">{v.rate}</span>
+                                </button>
+                            ))}
+                        </div>
+                        {!vehicle && (
+                            <p className="text-[10px] text-amber-600 font-medium mt-2 ml-1 flex items-center gap-1">
+                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                Pilih satu kategori di atas
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Time Inputs */}
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className="form-group">
+                            <label className="form-label text-[10px] ml-1">Jam Kedatangan</label>
+                            <input
+                                type="datetime-local"
+                                value={entryTime}
+                                onChange={e => setEntryTime(e.target.value)}
+                                className="form-input"
                                 required
-                                className="w-full bg-white/5 border border-white/10 text-white text-base rounded-xl px-4 py-3.5 appearance-none focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-colors"
-                            >
-                                <option value="mobil" className="bg-secondary text-white">🚗 Mobil</option>
-                                <option value="motor" className="bg-secondary text-white">🏍️ Motor</option>
-                                <option value="box" className="bg-secondary text-white">🚛 Box / Truk</option>
-                                <option value="valet_weekday" className="bg-secondary text-white">🎖️ Valet Weekday</option>
-                                <option value="valet_weekend" className="bg-secondary text-white">🎖️ Valet Weekend</option>
-                            </select>
-                            <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-slate-400">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
-                            </div>
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label text-[10px] ml-1">Jam Keluar (Estimasi)</label>
+                            <input
+                                type="datetime-local"
+                                value={exitTime}
+                                onChange={e => setExitTime(e.target.value)}
+                                className="form-input"
+                                required
+                            />
                         </div>
                     </div>
 
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold text-slate-300">Jam Masuk</label>
-                        <input
-                            type="datetime-local"
-                            value={entryTime}
-                            onChange={e => setEntryTime(e.target.value)}
-                            required
-                            className="w-full bg-white/5 border border-white/10 text-white text-base rounded-xl px-4 py-3 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-colors placeholder:text-slate-500 [color-scheme:dark]"
-                        />
-                    </div>
-
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold text-slate-300">Jam Keluar</label>
-                        <input
-                            type="datetime-local"
-                            value={exitTime}
-                            onChange={e => setExitTime(e.target.value)}
-                            required
-                            className="w-full bg-white/5 border border-white/10 text-white text-base rounded-xl px-4 py-3 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-colors placeholder:text-slate-500 [color-scheme:dark]"
-                        />
-                    </div>
-
-                    <div className="flex gap-3 mt-4">
-                        <button
-                            type="button"
-                            onClick={() => { setVehicle('mobil'); setEntryTime(''); setExitTime(''); }}
-                            className="flex-shrink-0 w-24 py-3.5 rounded-xl font-semibold bg-white/5 hover:bg-white/10 text-slate-300 transition-colors"
-                        >
-                            Reset
-                        </button>
-                        <button
-                            type="submit"
-                            className="flex-1 flex justify-center items-center gap-2 py-3.5 rounded-xl font-semibold bg-primary hover:bg-indigo-600 shadow-lg shadow-primary/30 text-white transition-all hover:-translate-y-0.5 active:translate-y-0"
-                        >
-                            <Calculator size={18} /> Hitung Tarif
-                        </button>
-                    </div>
+                    {/* Submit */}
+                    <button
+                        type="submit"
+                        disabled={loading || !vehicle}
+                        className="btn-primary w-full flex items-center justify-center gap-2 text-sm uppercase tracking-wide py-4 mt-2"
+                        style={{ opacity: (!vehicle ? 0.6 : 1) }}
+                    >
+                        {loading ? (
+                            <>
+                                <div className="w-4 h-4 border-2 border-white/80 border-t-white rounded-full animate-spin" />
+                                Menghitung Tagihan...
+                            </>
+                        ) : (
+                            <>
+                                Kalkulasi Tagihan
+                                <ChevronRight size={16} />
+                            </>
+                        )}
+                    </button>
                 </form>
             </div>
 
-            <CameraModal
-                isOpen={cameraOpen}
-                onClose={() => setCameraOpen(false)}
-                onDetect={(v) => setVehicle(v)}
-            />
+            {/* Camera Modal */}
+            {showCamera && (
+                <CameraModal
+                    onDetected={handleVehicleDetected}
+                    onClose={() => setShowCamera(false)}
+                />
+            )}
         </>
     );
 }
