@@ -1,72 +1,79 @@
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Home, History as HistoryIcon } from 'lucide-react';
+import { Home as HomeIcon, BarChart2, Zap } from 'lucide-react';
+import HomePage from './pages/Home';
+import HistoryPage from './pages/History';
 
 function Header() {
-    const location = useLocation();
-    const isHistory = location.pathname === '/history';
-
     return (
-        <header className="flex flex-col items-center justify-center pt-10 pb-6 slide-in-bottom">
-            <div className="text-accent text-sm font-bold tracking-[0.2em] mb-2 px-3 py-1 bg-surface border border-white/10 rounded-full">
-                GANDARIA CITY
+        <header className="flex flex-col items-center pt-8 pb-4 anim-slide-up">
+            {/* Badge */}
+            <div className="flex items-center gap-2 mb-4">
+                <div className="chip chip-indigo">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                    GANDARIA CITY
+                </div>
             </div>
-            <h1 className="text-white text-4xl sm:text-5xl font-extrabold mb-2 text-glow">
-                Parkmate Gancit
-            </h1>
-            <p className="text-slate-400 text-sm font-medium">
-                Sistem Parkir Cerdas — Tenaga AI
-            </p>
 
-            <nav className="mt-6 flex gap-2 p-1.5 bg-white/5 border border-white/10 rounded-2xl w-full max-w-sm">
-                <Link
-                    to="/"
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-medium transition-all ${!isHistory ? 'bg-primary text-white shadow-lg shadow-primary/40' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
-                >
-                    <Home size={16} /> Kalkulator
-                </Link>
-                <Link
-                    to="/history"
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-medium transition-all ${isHistory ? 'bg-primary text-white shadow-lg shadow-primary/40' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
-                >
-                    <HistoryIcon size={16} /> Dashboard
-                </Link>
-            </nav>
+            {/* Logo */}
+            <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center shadow-md flex-shrink-0">
+                    <Zap size={20} className="text-white" fill="white" />
+                </div>
+                <div>
+                    <h1 className="text-2xl font-black tracking-tight text-slate-800" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+                        ParkMate<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-sky-500"> Gancit</span>
+                    </h1>
+                    <p className="text-[11px] text-slate-400 font-bold tracking-widest uppercase mt-0.5">Smart Parking System</p>
+                </div>
+            </div>
         </header>
     );
 }
 
-function MainLayout({ children }) {
+function BottomNav() {
+    const location = useLocation();
+    const isHistory = location.pathname === '/history';
+
     return (
-        <>
-            <div className="bg-animated" aria-hidden="true">
-                <div className="blob shape-1"></div>
-                <div className="blob shape-2"></div>
-                <div className="blob shape-3"></div>
-            </div>
-            <div className="min-h-screen p-4 sm:p-6 pb-20 max-w-2xl mx-auto relative z-10 font-outfit">
-                <Header />
-                <main className="min-h-[50vh]">
-                    {children}
-                </main>
-                <footer className="mt-12 text-center text-slate-500 text-sm">
-                    <p>© 2025 Daffa Rizki Ariyanto • Gandaria City</p>
-                </footer>
-            </div>
-        </>
+        <nav className="fixed bottom-0 left-0 right-0 z-50 bottom-nav">
+            <Link to="/" className={`bottom-nav-btn ${!isHistory ? 'active' : ''}`}>
+                <HomeIcon size={20} strokeWidth={isHistory ? 2 : 2.5} />
+                <span>Kalkulator</span>
+            </Link>
+            <Link to="/history" className={`bottom-nav-btn ${isHistory ? 'active' : ''}`}>
+                <BarChart2 size={20} strokeWidth={!isHistory ? 2 : 2.5} />
+                <span>Dashboard</span>
+            </Link>
+        </nav>
     );
 }
 
-// Temporary placeholders until we build the actual pages
-const HomePlaceholder = () => <div className="glass-card p-6 rounded-3xl text-center text-slate-300">Form Kalkulator akan dimigrasi di sini.</div>;
-const HistoryPlaceholder = () => <div className="glass-card p-6 rounded-3xl text-center text-slate-300">Dashboard Riwayat akan dimigrasi di sini.</div>;
-
 export default function App() {
     return (
-        <MainLayout>
-            <Routes>
-                <Route path="/" element={<HomePlaceholder />} />
-                <Route path="/history" element={<HistoryPlaceholder />} />
-            </Routes>
-        </MainLayout>
+        <>
+            {/* Animated Background */}
+            <div className="bg-scene" aria-hidden="true">
+                <div className="blob blob-1" />
+                <div className="blob blob-2" />
+                <div className="blob blob-3" />
+            </div>
+            <div className="grid-overlay" aria-hidden="true" />
+
+            {/* Content */}
+            <div className="relative z-10 min-h-screen max-w-xl mx-auto px-4 pb-28" style={{ fontFamily: 'Inter, sans-serif' }}>
+                <Header />
+                <main>
+                    <Routes>
+                        <Route path="/" element={<HomePage />} />
+                        <Route path="/history" element={<HistoryPage />} />
+                    </Routes>
+                </main>
+                <footer className="mt-10 text-center text-slate-400 text-[10px] font-medium tracking-wide pb-2 uppercase">
+                    <p>© {new Date().getFullYear()} Daffa Rizki Ariyanto · Gandaria City</p>
+                </footer>
+            </div>
+
+            <BottomNav />
+        </>
     );
 }

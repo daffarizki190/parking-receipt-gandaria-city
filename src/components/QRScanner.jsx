@@ -1,135 +1,132 @@
 import { useState, useRef, useEffect } from 'react';
 import jsQR from 'jsqr';
-import { Camera, RefreshCw } from 'lucide-react';
-import { getVehicleLabel, formatDateTime } from '../lib/parkingLogic';
+import { Camera, X, StopCircle, CheckCircle2 } from 'lucide-react';
 
 export default function QRScanner({ onScanSuccess }) {
-    const [scanning, setScanning] = useState(false);
-    const [errorMsg, setErrorMsg] = useState('');
-    const [successData, setSuccessData] = useState(null);
-
     const videoRef = useRef(null);
-    const canvasRef = useRef(document.createElement('canvas'));
-    const animFrame = useRef(null);
+    const canvasRef = useRef(null);
+    const [scanning, setScanning] = useState(true);
+    const [result, setResult] = useState(null);
     const streamRef = useRef(null);
 
     useEffect(() => {
-        return () => stopScan();
-    }, []);
+        if (scanning && !result) {
+            startCamera();
+        } else {
+            stopCamera();
+        }
+        return stopCamera;
+    }, [scanning, result]);
 
-    const startScan = async () => {
+    const startCamera = async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-            streamRef.current = stream;
-            setScanning(true);
-            setErrorMsg('');
-            setSuccessData(null);
-
+            const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            streamRef.current = s;
             if (videoRef.current) {
-                videoRef.current.srcObject = stream;
+                videoRef.current.srcObject = s;
                 videoRef.current.play();
-                tick();
+                requestAnimationFrame(tick);
             }
-        } catch (err) {
-            setErrorMsg('Tidak dapat mengakses kamera. Izin ditolak.');
+        } catch (e) {
+            console.error(e);
+            alert('Akses kamera ditolak atau tidak tersedia.');
+            setScanning(false);
         }
     };
 
-    const stopScan = () => {
-        setScanning(false);
-        if (animFrame.current) cancelAnimationFrame(animFrame.current);
-        if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+    const stopCamera = () => {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(t => t.stop());
+            streamRef.current = null;
+        }
     };
 
     const tick = () => {
-        if (!videoRef.current || !canvasRef.current || !scanning) return;
+        if (!videoRef.current || videoRef.current.readyState !== videoRef.current.HAVE_ENOUGH_DATA) {
+            if (scanning) requestAnimationFrame(tick);
+            return;
+        }
+        const vx = videoRef.current;
+        const cx = canvasRef.current;
+        cx.width = vx.videoWidth;
+        cx.height = vx.videoHeight;
+        const ctx = cx.getContext('2d');
+        ctx.drawImage(vx, 0, 0, cx.width, cx.height);
 
-        if (videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
-            const canvas = canvasRef.current;
-            const ctx = canvas.getContext('2d');
-            canvas.width = videoRef.current.videoWidth;
-            canvas.height = videoRef.current.videoHeight;
-            ctx.drawImage(videoRef.current, 0, 0);
+        const imgData = ctx.getImageData(0, 0, cx.width, cx.height);
+        const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' });
 
-            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const code = jsQR(imgData.data, canvas.width, canvas.height);
-
-            if (code) {
-                try {
-                    const payload = JSON.parse(code.data);
-                    if (payload.v && payload.e) {
-                        setSuccessData(payload);
-                        onScanSuccess(payload);
-                        stopScan();
-                        return;
-                    }
-                } catch {
-                    setErrorMsg('Kode QR tidak valid (bukan tiket sistem).');
-                }
-            }
+        if (code) {
+            handleScan(code.data);
+            return;
         }
 
-        if (scanning) {
-            animFrame.current = requestAnimationFrame(tick);
+        if (scanning) requestAnimationFrame(tick);
+    };
+
+    const handleScan = (data) => {
+        setResult(data);
+        setScanning(false);
+        try {
+            const parsed = JSON.parse(data);
+            // Simulate processing time for UX
+            setTimeout(() => onScanSuccess(parsed), 1500);
+        } catch (e) {
+            setTimeout(() => alert("Format QR Code tidak dikenali."), 500);
         }
     };
 
     return (
-        <div className="glass-card flex flex-col p-6 rounded-3xl animate-in fade-in zoom-in-95 duration-300">
-            <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 bg-indigo-500/10 rounded-xl text-accent border border-indigo-500/20">
-                    <Camera size={24} />
-                </div>
-                <div>
-                    <h2 className="text-xl font-bold">Scan Tiket QR</h2>
-                    <p className="text-slate-400 text-sm">Pindai kode QR dari karcis masuk Anda.</p>
-                </div>
+        <div className="glass anim-fade-in overflow-hidden relative border-slate-200">
+            <div className="absolute top-4 left-4 z-10 chip bg-white text-indigo-700 shadow-sm border border-slate-100 font-bold px-3 py-1.5 flex items-center gap-2">
+                {scanning ? (
+                    <><span className="inline-block w-2 h-2 rounded-full bg-indigo-500 animate-pulse" /> Tracking ID/QR</>
+                ) : (
+                    <><CheckCircle2 size={14} className="text-emerald-500" /> Terdeteksi</>
+                )}
             </div>
 
-            <div className="relative w-full aspect-square max-w-sm mx-auto bg-black rounded-2xl overflow-hidden mt-2 border border-white/5 shadow-inner">
-                {scanning ? (
-                    <>
-                        <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                            <div className="w-[65%] h-[65%] border-2 border-accent rounded-xl shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] relative overflow-hidden">
-                                <div className="absolute top-0 left-0 right-0 h-0.5 bg-accent/80 shadow-[0_0_8px_theme(colors.accent)] animate-[scanBeam_2s_ease-in-out_infinite]" />
-                            </div>
-                        </div>
-                    </>
-                ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 gap-3 p-6 text-center">
-                        <Camera size={48} className="opacity-50" />
-                        <p className="text-sm">Kamera tidak aktif. Klik tombol di bawah untuk mulai memindai.</p>
+            <div className="relative aspect-[4/5] sm:aspect-video bg-slate-900 overflow-hidden">
+                <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover opacity-80" playsInline muted autoPlay />
+                <canvas ref={canvasRef} className="hidden" />
+
+                {/* Elegant Scan Frame for Light UI (Slate overlay) */}
+                {scanning && (
+                    <div className="scan-frame shadow-[0_0_0_4000px_rgba(15,23,42,0.8)] border border-white/20">
+                        {/* Frame Corners */}
+                        <div className="scan-corner border-t-0 border-l-0 bottom-0 right-0 border-white/70"></div>
+                        <div className="scan-corner border-t-0 border-r-0 bottom-0 left-0 border-white/70"></div>
+                        <div className="scan-corner border-b-0 border-l-0 top-0 right-0 border-white/70"></div>
+                        <div className="scan-corner border-b-0 border-r-0 top-0 left-0 border-white/70"></div>
+                        <div className="scan-line bg-gradient-to-r from-transparent via-white/50 to-transparent"></div>
+                    </div>
+                )}
+
+                {/* Success Overlay */}
+                {result && (
+                    <div className="absolute inset-0 bg-emerald-500/90 backdrop-blur-sm flex flex-col items-center justify-center anim-fade-in p-6 text-center text-white">
+                        <CheckCircle2 size={48} className="mb-4 animate-bounce" />
+                        <h3 className="font-bold text-lg mb-1" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Kode Diterima</h3>
+                        <p className="text-xs font-mono bg-black/20 p-2 rounded-lg break-all select-all font-bold tracking-tight border border-white/20">
+                            {result}
+                        </p>
+                        <p className="text-[10px] mt-4 opacity-80 uppercase tracking-widest font-bold">Memuat Data...</p>
                     </div>
                 )}
             </div>
 
-            {errorMsg && (
-                <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm font-medium text-center">
-                    {errorMsg}
-                </div>
-            )}
-
-            {successData && (
-                <div className="mt-4 p-4 bg-green-500/10 border border-green-500/30 rounded-xl text-center">
-                    <div className="text-green-400 font-bold mb-1">✅ Berhasil Dibaca!</div>
-                    <div className="text-sm text-slate-300">Karcis: {getVehicleLabel(successData.v)}</div>
-                    <div className="text-sm text-slate-300">Masuk: {formatDateTime(new Date(successData.e))}</div>
-                    <div className="mt-2 text-xs text-slate-400">Data telah diisi otomatis.</div>
-                </div>
-            )}
-
-            <div className="mt-6">
-                {scanning ? (
-                    <button onClick={stopScan} className="w-full py-3.5 rounded-xl font-semibold bg-white/5 hover:bg-white/10 text-slate-300 transition-colors">
-                        Hentikan Kamera
+            <div className="p-4 bg-white border-t border-slate-100 text-center">
+                <p className="text-[11px] text-slate-500 mb-4 font-medium uppercase tracking-widest leading-relaxed">
+                    Arahkan kamera ke tiket fisik atau kode digital Gandaria City
+                </p>
+                <div className="flex justify-center">
+                    <button
+                        onClick={() => { setScanning(!scanning); setResult(null); }}
+                        className={`btn-secondary text-xs px-6 py-2.5 rounded-xl uppercase tracking-wider ${scanning ? 'bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100 hover:border-rose-200 hover:text-rose-700' : 'bg-slate-50 border-slate-200'}`}
+                    >
+                        {scanning ? <><StopCircle size={14} /> Batalkan</> : <><Camera size={14} /> Pindai</>}
                     </button>
-                ) : (
-                    <button onClick={startScan} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold bg-primary hover:bg-indigo-600 text-white shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 active:translate-y-0">
-                        {successData ? <RefreshCw size={18} /> : <Camera size={18} />}
-                        {successData ? 'Scan Ulang' : 'Aktifkan Kamera Scan'}
-                    </button>
-                )}
+                </div>
             </div>
         </div>
     );

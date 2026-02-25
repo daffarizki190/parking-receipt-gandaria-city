@@ -1,122 +1,180 @@
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Camera, X, Scan, CheckCircle2 } from 'lucide-react';
 import * as cocoSsd from '@tensorflow-models/coco-ssd';
 import '@tensorflow/tfjs';
-import { getVehicleLabel } from '../lib/parkingLogic';
-import { X, Camera } from 'lucide-react';
 
-const VEHICLE_MAP = {
-    car: 'mobil', truck: 'box', bus: 'box', motorcycle: 'motor', bicycle: 'motor',
-};
-
-export default function CameraModal({ isOpen, onClose, onDetect }) {
+export default function CameraModal({ onDetected, onClose }) {
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
     const [model, setModel] = useState(null);
-    const [status, setStatus] = useState('Memuat model AI...');
-    const [stream, setStream] = useState(null);
-    const [overlayMsg, setOverlayMsg] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [status, setStatus] = useState("Memuat Model AI...");
+    const streamRef = useRef(null);
+    const [detectedVehicle, setDetectedVehicle] = useState(null);
 
+    // Initialize camera and model
     useEffect(() => {
-        if (isOpen && !model) {
-            cocoSsd.load().then((m) => {
-                setModel(m);
-                setStatus('');
-            }).catch(err => {
+        let isActive = true;
+        const init = async () => {
+            try {
+                // Load TFJS model
+                const loadedModel = await cocoSsd.load();
+                if (!isActive) return;
+                setModel(loadedModel);
+
+                // Start Camera
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                if (!isActive) {
+                    stream.getTracks().forEach(t => t.stop());
+                    return;
+                }
+                streamRef.current = stream;
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                    // Need to wait for video to load metadata to play and get dimensions
+                    videoRef.current.onloadedmetadata = () => {
+                        videoRef.current.play();
+                        setLoading(false);
+                        setStatus("Arahkan kamera ke kendaraan");
+                        detectFrame(loadedModel, videoRef.current);
+                    };
+                }
+            } catch (err) {
                 console.error(err);
-                setStatus('⚠ Gagal memuat model COCO-SSD.');
-            });
-        }
-    }, [isOpen]);
-
-    useEffect(() => {
-        if (isOpen && model) {
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-                .then((s) => {
-                    setStream(s);
-                    if (videoRef.current) videoRef.current.srcObject = s;
-                })
-                .catch(() => setStatus('⚠ Tidak dapat mengakses kamera.'));
-        } else {
-            if (stream) {
-                stream.getTracks().forEach(t => t.stop());
-                setStream(null);
+                if (isActive) {
+                    setStatus("Kamera tidak diizinkan atau error model.");
+                    setLoading(false);
+                }
             }
+        };
+
+        init();
+
+        return () => {
+            isActive = false;
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(t => t.stop());
+            }
+        };
+    }, []);
+
+    const detectFrame = async (net, video) => {
+        if (!video || video.paused || video.ended || detectedVehicle) return;
+
+        try {
+            const predictions = await net.detect(video);
+
+            // Draw boxes
+            const canvas = canvasRef.current;
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                for (const p of predictions) {
+                    if (p.score > 0.6) {
+                        const isCar = ['car', 'truck', 'bus'].includes(p.class);
+                        const isMotorcycle = p.class === 'motorcycle';
+
+                        if (isCar || isMotorcycle) {
+                            // Draw bounding box
+                            const [x, y, width, height] = p.bbox;
+                            ctx.strokeStyle = '#4f46e5'; // Indigo-600
+                            ctx.lineWidth = 4;
+                            ctx.strokeRect(x, y, width, height);
+
+                            // Draw label background
+                            ctx.fillStyle = '#4f46e5';
+                            ctx.fillRect(x, y - 30, width, 30);
+
+                            // Draw text
+                            ctx.fillStyle = '#ffffff';
+                            ctx.font = 'bold 16px "Space Grotesk", sans-serif';
+                            const label = `${p.class} (${Math.round(p.score * 100)}%)`;
+                            ctx.fillText(label, x + 10, y - 10);
+
+                            // Auto-select after brief delay to show the box
+                            const code = isMotorcycle ? 'motor' : p.class === 'truck' ? 'box' : 'mobil';
+                            if (!detectedVehicle) {
+                                setDetectedVehicle(code);
+                                setStatus(`Terdeteksi: ${code.toUpperCase()}`);
+                                setTimeout(() => onDetected(code), 1200);
+                                return; // Stop loop after finding one
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.error(e);
         }
-    }, [isOpen, model]);
 
-    const detectFrame = async () => {
-        if (!model || !videoRef.current || !canvasRef.current) return;
-
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0);
-
-        const predictions = await model.detect(canvas);
-        const vehiclePreds = predictions.filter(p => VEHICLE_MAP[p.class] && p.score > 0.4);
-
-        if (vehiclePreds.length === 0) {
-            setOverlayMsg('⚠ Tidak ada kendaraan terdeteksi.');
-            return;
+        if (!detectedVehicle) {
+            requestAnimationFrame(() => detectFrame(net, video));
         }
-
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 3;
-        vehiclePreds.forEach(p => {
-            const [x, y, w, h] = p.bbox;
-            ctx.strokeRect(x, y, w, h);
-            ctx.fillStyle = '#38bdf8';
-            ctx.font = 'bold 16px Outfit, sans-serif';
-            ctx.fillText(`${p.class} (${Math.round(p.score * 100)}%)`, x + 4, y - 6);
-        });
-
-        const best = vehiclePreds[0];
-        const vehicleVal = VEHICLE_MAP[best.class];
-        setOverlayMsg(`✅ Terdeteksi: ${getVehicleLabel(vehicleVal)} (${Math.round(best.score * 100)}%)`);
-
-        onDetect(vehicleVal);
-        setTimeout(() => onClose(), 2000);
     };
 
-    if (!isOpen) return null;
-
     return (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={onClose}>
-            <div className="bg-[#1e1b4b] border border-white/10 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-                <div className="p-5 flex justify-between items-center border-b border-white/5">
-                    <h3 className="text-lg font-bold text-white">Deteksi Kendaraan AI</h3>
-                    <button onClick={onClose} className="p-2 bg-white/5 rounded-xl hover:bg-white/10 text-white transition-colors">
-                        <X size={18} />
-                    </button>
-                </div>
-
-                <div className="p-5 flex flex-col items-center">
-                    <p className="text-sm text-slate-400 mb-4 text-center">
-                        Arahkan kamera ke kendaraan. {status && <span className="text-accent">{status}</span>}
-                    </p>
-
-                    <div className="relative w-full aspect-[4/3] bg-black rounded-xl overflow-hidden shadow-inner">
-                        <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
-
-                        {overlayMsg && (
-                            <div className="absolute bottom-3 left-3 right-3 bg-black/70 backdrop-blur-md text-white text-sm font-semibold p-3 border border-white/10 rounded-xl text-center">
-                                {overlayMsg}
-                            </div>
-                        )}
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex flex-col anim-fade-in pb-safe">
+            {/* Header */}
+            <div className="bg-white px-4 py-4 flex items-center justify-between shadow-sm relative z-10 rounded-b-3xl">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-inner-soft">
+                        <Camera size={20} />
                     </div>
-
-                    <button
-                        disabled={!model || !stream}
-                        onClick={detectFrame}
-                        className="mt-6 w-full flex items-center justify-center gap-2 bg-primary hover:bg-indigo-600 disabled:bg-slate-700 text-white py-3 px-4 rounded-xl font-semibold transition-all shadow-lg hover:shadow-primary/40 active:scale-[0.98]"
-                    >
-                        <Camera size={18} /> Deteksi Sekarang
-                    </button>
+                    <div>
+                        <h3 className="font-bold text-slate-800 text-lg" style={{ fontFamily: 'Space Grotesk, sans-serif', letterSpacing: '-0.5px' }}>AI Vision</h3>
+                        <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">{status}</p>
+                    </div>
                 </div>
+                <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 border border-slate-200 transition-colors">
+                    <X size={20} />
+                </button>
+            </div>
+
+            {/* Camera View */}
+            <div className="flex-1 relative overflow-hidden mt-2 mx-2 rounded-3xl bg-slate-800 shadow-inner">
+                {loading && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-100 z-10">
+                        <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4" />
+                        <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Memuat Model...</p>
+                    </div>
+                )}
+
+                <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" playsInline muted autoPlay />
+                <canvas ref={canvasRef} className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
+
+                {/* Scanning UI Overlays */}
+                {!loading && !detectedVehicle && (
+                    <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
+                        <div className="w-64 h-64 border-2 border-dashed border-white/50 rounded-3xl relative">
+                            {/* Scanning line animation */}
+                            <div className="absolute inset-0 overflow-hidden rounded-3xl">
+                                <div className="w-full h-1 bg-gradient-to-r from-transparent via-indigo-400 to-transparent shadow-[0_0_15px_rgba(79,70,229,0.5)] absolute animate-[scan_2s_ease-in-out_infinite]" />
+                            </div>
+                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-900/80 backdrop-blur-sm text-white text-[10px] px-3 py-1 rounded-full font-bold uppercase tracking-widest border border-white/20">
+                                Posisikan Kendaraan
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Success Overlay */}
+                {detectedVehicle && (
+                    <div className="absolute inset-0 bg-indigo-500/90 backdrop-blur-sm flex flex-col items-center justify-center z-20 anim-fade-in text-white">
+                        <CheckCircle2 size={64} className="mb-4 animate-bounce" />
+                        <h2 className="text-2xl font-black mb-2 uppercase tracking-widest" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>{detectedVehicle}</h2>
+                        <p className="text-xs font-medium tracking-wide opacity-90">Kendaraan Teridentifikasi</p>
+                    </div>
+                )}
+            </div>
+
+            <div className="px-6 py-6 text-center">
+                <p className="text-xs text-slate-200 font-medium tracking-wide drop-shadow-md">
+                    <Scan size={14} className="inline mr-1.5 mb-0.5" />
+                    Point camera at vehicle for auto-detection
+                </p>
             </div>
         </div>
     );

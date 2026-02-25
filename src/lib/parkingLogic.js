@@ -11,8 +11,8 @@ export const getVehicleLabel = (type) => {
         mobil: "🚗 Mobil",
         motor: "🏍️ Motor",
         box: "🚛 Box/Truk",
-        valet_weekday: "🎖️ Valet (WD)",
-        valet_weekend: "🎖️ Valet (WE)",
+        valet_weekday: "🚗 Valet (WD)",
+        valet_weekend: "🚗 Valet (WE)",
     };
     return labels[type] || type;
 };
@@ -31,7 +31,7 @@ export const formatDateTime = (date) => {
     return `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())} WIB`;
 };
 
-export const buildBreakdown = ({ vehicle, entry, exit }) => {
+export const buildBreakdown = ({ vehicle, entry, exit, isLostTicket = false }) => {
     const { firstRate, nextRate } = TARIFF[vehicle] || {};
     if (!firstRate) return { error: "Jenis kendaraan tidak valid." };
 
@@ -67,29 +67,42 @@ export const buildBreakdown = ({ vehicle, entry, exit }) => {
         });
     }
 
-    const totalCharge = firstRate + additionalCharge;
+    let penaltyCharge = 0;
+    if (isLostTicket) {
+        const fee = vehicle === 'motor' ? 25000 : 50000;
+        penaltyCharge = fee;
+        hourlyRows.push({
+            label: "Denda Tiket Hilang",
+            unit: "1×",
+            subtotal: fee
+        });
+    }
+
+    const totalCharge = firstRate + additionalCharge + penaltyCharge;
 
     return {
         totalMinutes,
         durHours, durMins, durDays, durHoursRem,
-        additionalHours, additionalCharge, totalCharge,
+        additionalHours, additionalCharge, totalCharge, penaltyCharge,
         hourlyRows,
         methodLabel: "Per jam (dibulatkan ke atas)",
     };
 };
 
-export const saveTransaction = (breakdown, entry, exit, vehicle) => {
+export const saveTransaction = (breakdown, entry, exit, vehicle, plate = '', isLostTicket = false) => {
     const history = JSON.parse(localStorage.getItem('parkingHistory') || '[]');
     if (history.length >= 50) history.pop();
 
     const newTx = {
-        id: `PKR-${Date.now()}`,
+        id: `GCT-${Date.now()}`,
         timestamp: new Date().toISOString(),
         vehicle,
+        plate,
+        isLostTicket,
         entry: entry.toISOString(),
         exit: exit.toISOString(),
         methodLabel: breakdown.methodLabel,
-        duration: breakdown.totalMinutes,
+        duration: breakdown.durMinutes,
         total: breakdown.totalCharge,
     };
 
