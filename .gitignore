@@ -17,3 +17,4 @@ apk-cordova/node_modules/
 dist/
 build/
 node_modules
+.vercel

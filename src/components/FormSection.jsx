@@ -3,6 +3,7 @@ import { Mic, Camera, Calculator, ChevronRight, FileText } from 'lucide-react';
 import { TARIFF, formatIDR } from '../lib/parkingLogic';
 import VoiceCommand from './VoiceCommand';
 import CameraModal from './CameraModal';
+import PlateScanner from './PlateScanner';
 
 const VEHICLES = [
     { key: 'motor', emoji: '🏍️', name: 'Motor', rate: `${formatIDR(TARIFF.motor.firstRate)}/jam` },
@@ -26,6 +27,7 @@ export default function FormSection({ initialData, onSubmit }) {
     const [isLostTicket, setIsLostTicket] = useState(initialData?.isLostTicket || false);
     const [showVoice, setShowVoice] = useState(false);
     const [showCamera, setShowCamera] = useState(false);
+    const [showPlateScanner, setShowPlateScanner] = useState(false);
 
     // Auto-fill "now" as entry and exit times by default
     useEffect(() => {
@@ -124,11 +126,11 @@ export default function FormSection({ initialData, onSubmit }) {
                         <div className="grid grid-cols-2 gap-3">
                             <label className={`relative flex items-center justify-center gap-2 p-3 sm:py-3.5 rounded-xl border cursor-pointer transition-all ${!isLostTicket ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-500/10' : 'border-slate-200 bg-slate-50 opacity-60 hover:bg-slate-100 dark:bg-slate-800/50 dark:border-slate-700/50'}`}>
                                 <input type="radio" name="ticket_type" className="hidden" checked={!isLostTicket} onChange={() => setIsLostTicket(false)} />
-                                <span className="text-sm font-bold text-slate-800">Casual</span>
+                                <span className="text-sm font-bold text-slate-800 dark:text-slate-200">Casual</span>
                             </label>
                             <label className={`relative flex items-center justify-center gap-2 p-3 sm:py-3.5 rounded-xl border cursor-pointer transition-all ${isLostTicket ? 'border-rose-500 bg-rose-50/50 dark:bg-rose-500/10' : 'border-slate-200 bg-slate-50 opacity-60 hover:bg-slate-100 dark:bg-slate-800/50 dark:border-slate-700/50'}`}>
                                 <input type="radio" name="ticket_type" className="hidden" checked={isLostTicket} onChange={() => setIsLostTicket(true)} />
-                                <span className="text-sm font-bold text-slate-800 flex items-center gap-1.5">Lost Tiket <span className="text-[9px] bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 px-1.5 py-0.5 rounded font-black uppercase tracking-wider">+Denda</span></span>
+                                <span className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">Lost Tiket <span className="text-[9px] bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 px-1.5 py-0.5 rounded font-black uppercase tracking-wider">+Denda</span></span>
                             </label>
                         </div>
                     </div>
@@ -154,9 +156,9 @@ export default function FormSection({ initialData, onSubmit }) {
                             />
                             <button
                                 type="button"
-                                onClick={() => setPlate('B 1234 GCT')}
+                                onClick={() => setShowPlateScanner(true)}
                                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-indigo-500 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-all active:scale-95 border border-indigo-100/50 dark:bg-indigo-500/20 dark:border-indigo-500/30 dark:text-indigo-400"
-                                title="Isi Otomatis (Demo AI OCR)"
+                                title="Scan Plat Nomor"
                             >
                                 <Camera size={16} />
                             </button>
@@ -205,6 +207,17 @@ export default function FormSection({ initialData, onSubmit }) {
                 <CameraModal
                     onDetected={handleVehicleDetected}
                     onClose={() => setShowCamera(false)}
+                />
+            )}
+
+            {/* Plate Scanner Modal */}
+            {showPlateScanner && (
+                <PlateScanner
+                    onDetected={(plateStr) => {
+                        setPlate(plateStr);
+                        setShowPlateScanner(false);
+                    }}
+                    onClose={() => setShowPlateScanner(false)}
                 />
             )}
         </>
