@@ -31,10 +31,14 @@ export default function PlateScanner({ onDetected, onClose }) {
                 }, 3000);
             }
         } catch (e) {
-            console.error(e);
-            alert('Akses kamera ditolak atau tidak tersedia.');
-            setScanning(false);
-            onClose();
+            console.error('Camera access failed:', e);
+            // Fallback to simulation mode if camera not available
+            alert('Akses kamera tidak tersedia. Menggunakan mode simulasi OCR.');
+
+            // Still run the simulation even without camera
+            setTimeout(() => {
+                handleScan('B 1234 GCT');
+            }, 3000);
         }
     };
 
@@ -75,6 +79,13 @@ export default function PlateScanner({ onDetected, onClose }) {
             <div className="flex-1 relative overflow-hidden bg-black flex items-center justify-center">
                 <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover opacity-80" playsInline muted autoPlay />
                 <canvas ref={canvasRef} className="hidden" />
+
+                {/* If no stream, show a fallback background */}
+                {!streamRef.current && scanning && (
+                    <div className="absolute inset-0 bg-slate-800 flex items-center justify-center opacity-80">
+                        <Camera size={48} className="text-slate-600 animate-pulse" />
+                    </div>
+                )}
 
                 {/* Scanning Frame Overlay */}
                 {scanning && (
